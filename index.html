@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>新疆旅行规划师 Pro | GitHub部署版</title>
+    <title>新疆旅行规划师 Pro | 部署版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -65,7 +65,7 @@
         <section id="explore" class="tab-content active">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold text-gray-800">景点发现</h2>
-                <button onclick="openAttractionModal(true)" class="bg-blue-600 active:bg-blue-700 text-white px-3 py-2 rounded-xl shadow-lg flex items-center gap-1 text-xs transition-transform active:scale-95">
+                <button onclick="openAttractionModal()" class="bg-blue-600 active:bg-blue-700 text-white px-3 py-2 rounded-xl shadow-lg flex items-center gap-1 text-xs transition-transform active:scale-95">
                     <i class="ph ph-plus-bold"></i> 自定义
                 </button>
             </div>
@@ -242,7 +242,7 @@
                 <textarea id="modal-desc" placeholder="备注..." class="w-full bg-gray-50 border-0 rounded-xl p-3 ring-1 ring-gray-200 h-20 outline-none resize-none"></textarea>
                 <div class="text-xs text-gray-400 text-center" id="modal-coords-display">坐标: 未设置</div>
             </div>
-            <button onclick="saveCustomSpot()" class="w-full mt-5 bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-500/30">保 存</button>
+            <button onclick="saveCustomSpot()" id="save-spot-btn" class="w-full mt-5 bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-500/30">保 存</button>
         </div>
     </div>
 
@@ -276,44 +276,42 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js"; 
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         
         setLogLevel('debug'); // Enable Firestore logging
 
         // --- DEPLOYMENT CONFIGURATION ---
         
-        // 1. Canvas Globals (Used if running inside the platform)
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
-        // 2. Default/Placeholder Config for GitHub Pages deployment
-        const defaultFirebaseConfig = {
-            apiKey: "YOUR_FIREBASE_API_KEY", // <-- ⚠️ REPLACE THIS FOR LIVE DEPLOYMENT
-            authDomain: "your-project-id.firebaseapp.com",
-            projectId: "your-project-id",
-            storageBucket: "your-project-id.appspot.com",
-            messagingSenderId: "1234567890",
-            appId: "1:1234567890:web:abcdef123456"
+        // 2. Custom Configuration provided by user
+        const customFirebaseConfig = {
+            // YOUR PROVIDED CONFIGURATION
+            apiKey: "AIzaSyAlbsoPG7J2cDocEGisruheVdTaX1Wajgc",
+            authDomain: "xinjiang-c95f8.firebaseapp.com",
+            projectId: "xinjiang-c95f8",
+            storageBucket: "xinjiang-c95f8.appspot.com",
         };
 
-        // If running in Canvas, use the provided config string; otherwise, use the default placeholder object.
-        const configToUse = typeof __firebase_config !== 'undefined' && __firebase_config ? JSON.parse(__firebase_config) : defaultFirebaseConfig;
+        const configToUse = typeof __firebase_config !== 'undefined' && __firebase_config ? JSON.parse(__firebase_config) : customFirebaseConfig;
         const firebaseConfig = configToUse;
         
         // --- END CONFIGURATION ---
 
-        let app, db, auth;
-        let authMode = 'login'; // 'login' or 'register'
+        let app, db, auth, storage; 
+        let authMode = 'login'; 
         let currentUserId = null;
         let isAuthReady = false;
 
-        // Reference to window functions for external use
         window.openAuthModal = openAuthModal;
         window.toggleAuthMode = toggleAuthMode;
         window.handleAuthAction = handleAuthAction;
         window.handleSignOut = handleSignOut;
         window.saveUserData = saveUserData;
         window.loadUserData = loadUserData;
+        window.uploadImageAndGetUrl = uploadImageAndGetUrl; 
 
         function getUsernameFromEmail(email) {
             if (!email) return 'N/A';
@@ -353,13 +351,16 @@
 
         async function initAuthAndDb() {
             try {
-                if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_FIREBASE_API_KEY") {
-                    console.warn("WARNING: Firebase configuration is using placeholders. Data will not persist outside the Canvas environment.");
+                if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+                    console.error("Firebase configuration is incomplete. Data synchronization will be disabled.");
+                    window.state.initialized = true; 
+                    return;
                 }
                 
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
+                storage = getStorage(app); 
 
                 await setPersistence(auth, browserLocalPersistence);
 
@@ -370,7 +371,6 @@
                 onAuthStateChanged(auth, (user) => {
                     isAuthReady = true;
                     updateAuthStateUI(user);
-                    // Initial rendering when auth state is confirmed
                     if (!window.state.initialized) {
                        window.renderExploreGrid(); window.renderDayList(); window.renderAllSpots(); window.renderBudget(); window.renderGear(); window.initCharts();
                     }
@@ -380,10 +380,26 @@
                 console.error("Firebase initialization failed:", error);
             }
         }
+        
+        async function uploadImageAndGetUrl(base64Data, userId) {
+            if (!storage || !base64Data) return null;
+            
+            // Use the AUTH UID as the directory name
+            const path = `images/${userId}/${Date.now()}.jpeg`;
+            const storageRef = ref(storage, path);
+
+            try {
+                await uploadString(storageRef, base64Data, 'data_url');
+                const url = await getDownloadURL(storageRef);
+                return url;
+            } catch (error) {
+                console.error("Error uploading image to Storage:", error);
+                return null;
+            }
+        }
 
         async function saveUserData() {
-            if (!currentUserId || !isAuthReady) {
-                console.warn("User not authenticated, skipping save.");
+            if (!currentUserId || !isAuthReady || !db) {
                 return;
             }
 
@@ -398,14 +414,14 @@
                 };
 
                 await setDoc(docRef, dataToSave, { merge: true });
-                console.log("Data saved successfully to Firestore.");
+                
             } catch (e) {
                 console.error("Error saving document: ", e);
             }
         }
 
         async function loadUserData() {
-            if (!currentUserId || !isAuthReady) return;
+            if (!currentUserId || !isAuthReady || !db) return;
 
             try {
                 const docRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'data', 'state');
@@ -413,7 +429,6 @@
 
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    console.log("Data loaded from Firestore.");
                     
                     window.state.spots = [...window.defaultSpots, ...data.spots];
                     window.state.itinerary = JSON.parse(data.itinerary); 
@@ -424,7 +439,7 @@
                     window.updateCharts(); window.updateDashboard();
                     
                 } else {
-                    console.log("No saved data found. Using defaults.");
+                    // console.log("No saved data found. Using defaults.");
                 }
 
                 window.state.initialized = true;
@@ -435,7 +450,6 @@
         }
 
         // --- AUTH UI HANDLERS ---
-
         function openAuthModal() {
             document.getElementById('auth-modal').classList.remove('hidden');
         }
@@ -480,13 +494,13 @@
                 return;
             }
 
-            // Construct Firebase-compatible email
-            const email = `${username}@canvas.local`;
+            // Construct Firebase-compatible email 
+            const email = `${username}@${firebaseConfig.authDomain.split('.').slice(0, -2).join('.')}.canvas.local`;
 
             try {
                 if (authMode === 'register') {
                     await createUserWithEmailAndPassword(auth, email, password);
-                    alert("注册成功！数据已为您初始化。");
+                    alert(`账户 ${username} 注册成功！`);
                     saveUserData();
                 } else {
                     await signInWithEmailAndPassword(auth, email, password);
@@ -497,7 +511,11 @@
             } catch (error) {
                 let errorMessage = '认证失败。';
                 if (error.code === 'auth/email-already-in-use') errorMessage = '该账户名已被注册。';
-                if (error.code === 'auth/invalid-credential') errorMessage = '账户名或密码错误。';
+                if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') errorMessage = '账户名或密码错误。';
+                // Add specific deployment hint for cross-domain issues
+                if (error.code === 'auth/unauthorized-domain') {
+                    errorMessage += ' 部署失败。请检查：您是否已将当前域名添加到 Firebase 控制台的 [Authentication -> Settings -> Authorized domains] 列表中?';
+                }
                 errorEl.textContent = errorMessage;
                 console.error("Auth Error:", error);
             }
@@ -506,7 +524,7 @@
         async function handleSignOut() {
             try {
                 await signOut(auth);
-                alert("您已退出登录，当前数据不会被保存。");
+                alert("您已退出登录。");
                 document.getElementById('auth-modal').classList.add('hidden');
                 window.location.reload(); 
             } catch (error) {
@@ -520,12 +538,12 @@
     <script>
         // --- 核心数据 (Global State) ---
         const defaultSpots = [
-            { id: 1, name: "乌鲁木齐", type: "人文", desc: "首府", x: 500, y: 300, tags: ["中转"] },
-            { id: 2, name: "禾木村", type: "自然", desc: "晨雾", x: 450, y: 100, tags: ["摄影"] },
-            { id: 3, name: "喀纳斯", type: "自然", desc: "湖怪", x: 400, y: 80, tags: ["徒步"] },
-            { id: 4, name: "赛里木湖", type: "自然", desc: "蓝冰", x: 200, y: 350, tags: ["自驾"] },
-            { id: 5, name: "喀什古城", type: "人文", desc: "古城", x: 100, y: 800, tags: ["美食"] },
-            { id: 6, name: "可可托海", type: "滑雪", desc: "滑雪", x: 600, y: 150, tags: ["极限"] },
+            { id: 1, name: "乌鲁木齐", type: "人文", desc: "首府", x: 500, y: 300, tags: ["中转"], img: null },
+            { id: 2, name: "禾木村", type: "自然", desc: "晨雾", x: 450, y: 100, tags: ["摄影"], img: null },
+            { id: 3, name: "喀纳斯", type: "自然", desc: "湖怪", x: 400, y: 80, tags: ["徒步"], img: null },
+            { id: 4, name: "赛里木湖", type: "自然", desc: "蓝冰", x: 200, y: 350, tags: ["自驾"], img: null },
+            { id: 5, name: "喀什古城", type: "人文", desc: "古城", x: 100, y: 800, tags: ["美食"], img: null },
+            { id: 6, name: "可可托海", type: "滑雪", desc: "滑雪", x: 600, y: 150, tags: ["极限"], img: null },
         ];
         window.defaultSpots = defaultSpots;
 
@@ -616,7 +634,14 @@
             state.spots.forEach(s=>{
                 if((s.name.toLowerCase().includes(t)||s.tags.join('').includes(t))&&(f==='all'||(f==='custom'?s.id>1000:s.type===f))){
                     const div=document.createElement('div'); div.className="bg-white rounded-xl shadow-sm p-3 border border-gray-100 flex flex-col justify-between";
-                    div.innerHTML=`<div><div class="flex justify-between"><h3 class="font-bold text-gray-800">${s.name}</h3><span class="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">${s.type}</span></div><p class="text-xs text-gray-400 mt-1">${s.desc||''}</p></div><button onclick="addToRoute(${s.id})" class="mt-3 w-full bg-blue-50 text-blue-600 text-xs py-2 rounded font-medium">加入行程</button>`;
+                    
+                    let imageHtml = s.img && s.img.startsWith('http') ? 
+                        `<img src="${s.img}" onerror="this.onerror=null;this.src='https://placehold.co/100x100/A0AEC0/ffffff?text=Image+Load+Fail';" class="w-full h-24 object-cover rounded-lg mb-2">` : 
+                        `<div class="w-full h-24 bg-gray-100 flex items-center justify-center text-gray-400 rounded-lg mb-2"><i class="ph ph-map-pin"></i></div>`;
+
+                    div.innerHTML=`
+                        ${imageHtml}
+                        <div><div class="flex justify-between"><h3 class="font-bold text-gray-800">${s.name}</h3><span class="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">${s.type}</span></div><p class="text-xs text-gray-400 mt-1">${s.desc||''}</p></div><button onclick="addToRoute(${s.id})" class="mt-3 w-full bg-blue-50 text-blue-600 text-xs py-2 rounded font-medium">加入行程</button>`;
                     g.appendChild(div);
                 }
             });
@@ -666,14 +691,14 @@
             }
         }
         
-        window.openAttractionModal = (r) => {
+        window.openAttractionModal = (reset = true) => {
             document.getElementById('attraction-modal').classList.remove('hidden'); 
-            if(r){
+            if(reset){
                 document.getElementById('modal-name').value=''; state.tempSpotData=null; 
                 document.getElementById('modal-desc').value='';
                 document.getElementById('modal-coords-display').innerText='未设置';
                 currentModalImageBase64 = null;
-                document.getElementById('modal-img-input').value = ''; // Clear file input
+                document.getElementById('modal-img-input').value = '';
                 document.getElementById('modal-img-preview').innerHTML = `<i class="ph ph-image text-2xl mb-1"></i><span class="text-xs">点击添加封面图片 (可选)</span>`;
 
             } else if(state.tempSpotData?.x) {
@@ -685,12 +710,41 @@
             document.getElementById('attraction-modal').classList.add('hidden'); switchTab('routes'); 
             alert("请点击地图进行定位");
         }
-        function saveCustomSpot(){
-            const n=document.getElementById('modal-name').value; if(!n)return;
+        
+        async function saveCustomSpot(){
+            const n=document.getElementById('modal-name').value; 
+            if(!n) return;
+
+            let imageUrl = null;
+            if (currentModalImageBase64 && window.uploadImageAndGetUrl) {
+                if (!window.currentUserId) {
+                    alert("请先登录账户 (或注册) 才能上传图片并保存自定义景点。");
+                    return; 
+                }
+
+                const saveBtn = document.getElementById('save-spot-btn');
+                saveBtn.innerHTML = '<i class="ph ph-spinner-gap animate-spin"></i> 上传中...';
+                saveBtn.disabled = true;
+
+                const userId = window.currentUserId; 
+                
+                imageUrl = await window.uploadImageAndGetUrl(currentModalImageBase64, userId);
+                
+                saveBtn.innerHTML = '保 存';
+                saveBtn.disabled = false;
+
+
+                if (!imageUrl) {
+                    alert("图片上传失败，请检查 Firebase Storage 配置和安全规则。");
+                    return;
+                }
+            }
+
             state.spots.push({
                 id:Date.now(), name:n, type:document.getElementById('modal-type').value, desc:document.getElementById('modal-desc').value, x:state.tempSpotData?.x||500, y:state.tempSpotData?.y||500, tags:[],
-                img: currentModalImageBase64
+                img: imageUrl
             });
+            
             currentModalImageBase64 = null;
             renderExploreGrid(); renderAllSpots(); renderMap(); document.getElementById('attraction-modal').classList.add('hidden'); debounceSave();
         }
