@@ -119,6 +119,7 @@
                 <div class="lg:col-span-3 flex flex-col gap-3 bg-white p-3 rounded-2xl shadow-sm border border-gray-100 order-2 lg:order-1">
                     <div class="flex justify-between items-center">
                         <h3 class="font-bold text-gray-800 text-sm">📅 行程</h3>
+                        <!-- FIX: “+ 天数”按钮调用 addDay() -->
                         <button onclick="addDay()" class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100">+ 天数</button>
                     </div>
                     <div id="day-list" class="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto custom-scrollbar pb-2 lg:pb-0 h-auto lg:h-1/2"></div>
@@ -161,6 +162,7 @@
                         <div class="flex gap-2">
                             <input type="text" id="custom-item-name" placeholder="项目 (如:滑雪票)" class="flex-grow bg-gray-50 border-0 rounded-lg px-3 py-2 text-sm ring-1 ring-gray-200 outline-none">
                             <input type="number" id="custom-item-price" placeholder="¥" class="w-20 bg-gray-50 border-0 rounded-lg px-3 py-2 text-sm ring-1 ring-gray-200 outline-none">
+                            <!-- FIX: “添加支出”按钮调用 addCustomBudgetItem() -->
                             <button onclick="addCustomBudgetItem()" class="bg-blue-600 text-white px-3 rounded-lg hover:bg-blue-700 transition"><i class="ph ph-check-bold"></i></button>
                         </div>
                     </div>
@@ -213,7 +215,7 @@
                     <input type="range" id="temp-slider" min="-40" max="5" value="-20" oninput="updateDashboard(); debounceSave()" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mb-4">
                     <div class="grid grid-cols-2 gap-3 text-xs">
                         <div><div class="text-gray-500 mb-1">晨雾</div><div class="font-bold text-gray-800" id="prob-fog">85%</div></div>
-                        <div><div class="text-gray-500 mb-1">蓝冰</div><div class="font-bold text-gray-800" id="prob-ice">90%</div></div>
+                        <div><div class="font-bold text-gray-800" id="prob-ice">90%</div></div>
                     </div>
                 </div>
             </div>
@@ -302,7 +304,7 @@
     <!-- Firebase Scripts -->
     <script type="module">
         // =========================================================================
-        // 🚨🚨🚨 一劳永逸的解决方案：请将以下规则复制并发布到您的 Firebase Console 🚨🚨🚨
+        // 🚨🚨🚨 最终解决方案：请将以下规则复制并发布到您的 Firebase Console 🚨🚨🚨
         // =========================================================================
 
         /* ** [ Firestore Database Rules ] **
