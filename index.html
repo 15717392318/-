@@ -50,7 +50,7 @@
                 <div class="bg-blue-600 text-white p-1.5 rounded-lg shadow-md shadow-blue-500/30">
                     <i class="ph ph-lock text-xl"></i>
                 </div>
-                <h1 class="font-bold text-gray-800 text-base leading-tight">旅游规划师 <span class="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-100 align-middle" id="sync-status-badge">需登录</span></h1>
+                <h1 class="font-bold text-gray-800 text-base leading-tight">新疆规划师 <span class="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-100 align-middle" id="sync-status-badge">需登录</span></h1>
             </div>
             
             <!-- 登录/Profile Button -->
@@ -257,7 +257,7 @@
         <button onclick="switchTab('budget')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="budget"><i class="ph ph-calculator text-2xl"></i><span class="text-[10px]">预算</span></button>
         
         <button onclick="openAuthModal()" class="flex flex-col items-center justify-center w-12 h-12 bg-blue-600 rounded-full text-white shadow-lg -mt-6 border-4 border-white" title="账户">
-            <i class="ph ph-user text-2xl"></i>
+            <i class="ph ph-user-circle text-2xl"></i>
         </button>
 
         <button onclick="switchTab('data')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="data"><i class="ph ph-chart-pie-slice text-2xl"></i><span class="text-[10px]">统计</span></button>
@@ -713,6 +713,7 @@
             weatherTemp: -20,
             isPickingMode: false, 
             tempSpotCoords: null, // New variable for pick location mode
+            editingSpotId: null, // Track which spot is being edited
             initialized: false, // Initialized Firebase/Auth
             dataLoaded: false // Data successfully loaded from Firestore or defaulted
         };
@@ -742,9 +743,27 @@
         // --- 2. Explore & Route Logic ---
         // NEW: Delete Custom Spot Function
         window.deleteCustomSpot = (id) => {
-            state.spots = state.spots.filter(s => s.id !== id);
-            renderExploreGrid(); // Re-render the grid
-            debounceSave();
+            // Find spot index in the custom spots array (excluding default spots)
+            const defaultCount = defaultSpots.length;
+            const spotIndex = state.spots.findIndex(s => s.id === id);
+
+            if (spotIndex > -1 && id > defaultCount) {
+                // If it is found and is a custom spot, remove it from the state.spots array
+                state.spots.splice(spotIndex, 1);
+                
+                // Remove it from itinerary if present
+                state.itinerary.forEach(day => {
+                    const idx = day.indexOf(id);
+                    if (idx > -1) {
+                         day.splice(idx, 1);
+                    }
+                });
+
+                renderExploreGrid(); // Re-render the grid
+                debounceSave();
+            } else if (id <= defaultCount) {
+                 console.warn("无法删除默认景点!");
+            }
         }
 
 
@@ -754,8 +773,10 @@
                   f=document.getElementById('explore-filter').value; 
             g.innerHTML='';
             
+            const defaultCount = defaultSpots.length;
+
             state.spots.forEach(s=>{
-                if((s.name.toLowerCase().includes(t)||s.tags.join('').includes(t))&&(f==='all'||(f==='custom'?s.id>1000:s.type===f))){
+                if((s.name.toLowerCase().includes(t)||s.tags.join('').includes(t))&&(f==='all'||(f==='custom'?s.id>defaultCount:s.type===f))){
                     const div=document.createElement('div'); 
                     div.className="bg-white rounded-xl shadow-sm p-3 border border-gray-100 flex flex-col justify-between";
                     
@@ -763,10 +784,20 @@
                         `<img src="${s.img}" onerror="this.onerror=null;this.src='https://placehold.co/100x100/A0AEC0/ffffff?text=Image+Load+Fail';" class="w-full h-24 object-cover rounded-lg mb-2">` : 
                         `<div class="w-full h-24 bg-gray-100 flex items-center justify-center text-gray-400 rounded-lg mb-2"><i class="ph ph-map-pin"></i></div>`;
 
-                    // Check if it's a custom spot (id > 1000) for deletion option
-                    const isCustom = s.id > 1000 && window.currentUserId;
+                    // Check if it's a custom spot (id > defaultCount) for deletion and editing option
+                    const isCustom = s.id > defaultCount && window.currentUserId;
                     const deleteBtn = isCustom ? 
-                        `<button onclick="deleteCustomSpot(${s.id})" class="text-red-500 hover:text-red-700 transition" title="删除自定义景点">🗑️</button>` : '';
+                        `<button onclick="deleteCustomSpot(${s.id})" class="text-red-500 hover:text-red-700 transition p-1" title="删除自定义景点">🗑️</button>` : '';
+                    
+                    const editBtn = isCustom ? 
+                         `<button onclick="editSpot(${s.id})" class="text-blue-500 hover:text-blue-700 transition p-1" title="编辑景点">✏️</button>` : '';
+
+                    // For non-custom spots, still show a disabled delete button to guide the user
+                    const nonCustomDeleteBtn = !isCustom && window.currentUserId ? 
+                         `<button class="text-gray-300 p-1 cursor-default" title="默认景点不可删除">🗑️</button>` : '';
+                    
+                    const nonCustomEditBtn = !isCustom && window.currentUserId ?
+                         `<button class="text-gray-300 p-1 cursor-default" title="默认景点不可编辑">✏️</button>` : '';
 
                     div.innerHTML=`
                         ${imageHtml}
@@ -775,16 +806,50 @@
                                 <h3 class="font-bold text-gray-800">${s.name}</h3>
                                 <div class="flex items-center">
                                     <span class="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">${s.type}</span>
-                                    ${deleteBtn}
                                 </div>
                             </div>
                             <p class="text-xs text-gray-400 mt-1">${s.desc||''}</p>
-                            <button onclick="addToRoute(${s.id})" class="mt-3 w-full bg-blue-50 text-blue-600 text-xs py-2 rounded font-medium hover:bg-blue-100 transition">加入行程</button>
+                            <div class="flex justify-between mt-3 gap-2">
+                                <button onclick="addToRoute(${s.id})" class="w-full bg-blue-50 text-blue-600 text-xs py-2 rounded font-medium hover:bg-blue-100 transition">加入行程</button>
+                                ${isCustom ? editBtn : nonCustomEditBtn}
+                                ${isCustom ? deleteBtn : nonCustomDeleteBtn}
+                            </div>
                         </div>`;
                     g.appendChild(div);
                 }
             });
             updateDashboard();
+        }
+
+        // NEW: Function to load spot data into the modal for editing
+        window.editSpot = (id) => {
+            const spot = state.spots.find(s => s.id === id);
+            if (!spot) return;
+
+            // Set up temporary state to indicate editing mode and store spot ID
+            window.state.editingSpotId = id;
+
+            // Populate Modal Fields
+            document.getElementById('modal-name').value = spot.name;
+            document.getElementById('modal-type').value = spot.type;
+            document.getElementById('modal-desc').value = spot.desc || '';
+            document.getElementById('modal-coords-display').innerText = `坐标: Lng:${Math.round(spot.lng * 1000) / 1000}, Lat:${Math.round(spot.lat * 1000) / 1000}`;
+            
+            // Set temporary coordinates state for later saving
+            window.state.tempSpotCoords = { lng: spot.lng, lat: spot.lat };
+            
+            // Handle Image Preview
+            const previewEl = document.getElementById('modal-img-preview');
+            if (spot.img) {
+                previewEl.innerHTML = `<img src="${spot.img}" class="w-full h-full object-cover rounded-lg">`;
+                currentModalImageBase64 = spot.img; // Keep existing image data
+            } else {
+                 previewEl.innerHTML = `<i class="ph ph-image text-2xl mb-1"></i><span class="text-xs">点击添加封面图片 (可选)</span>`;
+                 currentModalImageBase64 = null;
+            }
+
+            document.getElementById('save-spot-btn').innerText = '保存修改';
+            document.getElementById('attraction-modal').classList.remove('hidden');
         }
         
         function addToRoute(id){ 
@@ -962,6 +1027,8 @@
                 currentModalImageBase64 = null;
                 document.getElementById('modal-img-input').value = '';
                 document.getElementById('modal-img-preview').innerHTML = `<i class="ph ph-image text-2xl mb-1"></i><span class="text-xs">点击添加封面图片 (可选)</span>`;
+                window.state.editingSpotId = null; // Exit editing mode
+                document.getElementById('save-spot-btn').innerText = '保 存';
 
             } else if(window.state.tempSpotCoords) {
                  document.getElementById('modal-coords-display').innerText = 
@@ -975,8 +1042,10 @@
                     `坐标: Lng:${Math.round(XINJIANG_CENTER.lng * 1000) / 1000}, Lat:${Math.round(XINJIANG_CENTER.lat * 1000) / 1000} (默认)`;
             }
             
-            // Ensure button text is "保存" on open
-            saveBtn.innerText = '保 存';
+            // Ensure button text is correct state
+            if (!window.state.editingSpotId) {
+                saveBtn.innerText = '保 存';
+            }
             saveBtn.classList.remove('bg-green-600', 'bg-red-600');
             saveBtn.classList.add('bg-blue-600');
         }
@@ -995,7 +1064,7 @@
             saveBtn.classList.add('bg-green-600');
             saveBtn.classList.remove('bg-blue-600');
             setTimeout(() => {
-                saveBtn.innerText = '保 存';
+                saveBtn.innerText = window.state.editingSpotId ? '保存修改' : '保 存';
                 saveBtn.classList.remove('bg-green-600');
                 saveBtn.classList.add('bg-blue-600');
             }, 1000);
@@ -1007,7 +1076,8 @@
             const nameInput = document.getElementById('modal-name');
             const n=nameInput.value;
             const saveBtn = document.getElementById('save-spot-btn');
-            
+            const editingId = window.state.editingSpotId;
+
             // Coordinate check: Uses XINJIANG_CENTER if temp is null
             const finalCoords = window.state.tempSpotCoords || XINJIANG_CENTER;
 
@@ -1020,9 +1090,10 @@
             }
             nameInput.classList.remove('ring-red-500', 'ring-2'); // Clear feedback
 
-            let imageUrl = null;
-            if (currentModalImageBase64 && window.uploadImageAndGetUrl) {
-                // FIX: Check for unauthenticated state before attempting upload
+            let imageUrl = currentModalImageBase64; // Start with existing image data (URL or Base64)
+
+            if (currentModalImageBase64 && !currentModalImageBase64.startsWith('http')) {
+                // Only upload if new image data is present (base64) AND authenticated
                 if (!window.currentUserId) {
                     console.error("图片上传失败: 请先登录账户 (或注册) 才能上传图片。");
                     
@@ -1031,7 +1102,7 @@
                     saveBtn.classList.add('bg-red-600');
                     
                     setTimeout(() => {
-                        saveBtn.innerText = '保 存';
+                        saveBtn.innerText = editingId ? '保存修改' : '保 存';
                         saveBtn.classList.remove('bg-red-600');
                         saveBtn.classList.add('bg-blue-600');
                     }, 2500);
@@ -1057,9 +1128,8 @@
                 }
             }
             
-            // --- Spot Creation ---
-            const newSpot = {
-                id:Date.now(), // Unique ID > 1000 for custom spots
+            const newSpotData = {
+                id: editingId || Date.now(), 
                 name:n, 
                 type:document.getElementById('modal-type').value, 
                 desc:document.getElementById('modal-desc').value, 
@@ -1069,7 +1139,19 @@
                 img: imageUrl
             };
 
-            state.spots.push(newSpot);
+            if (editingId) {
+                // Editing existing spot
+                const index = state.spots.findIndex(s => s.id === editingId);
+                if (index > -1) {
+                    // Replace the existing spot (preserving default spots index stability)
+                    state.spots[index] = newSpotData;
+                }
+            } else {
+                // Adding new spot
+                state.spots.push(newSpotData);
+            }
+
+            window.state.editingSpotId = null;
             window.state.tempSpotCoords = null; // Clear temp coords
             currentModalImageBase64 = null;
             closeModal('attraction-modal');
@@ -1361,4 +1443,3 @@
     </script>
 </body>
 </html>
-
