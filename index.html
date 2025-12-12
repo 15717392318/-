@@ -54,10 +54,19 @@
             </div>
             
             <!-- 登录/Profile Button -->
-            <button id="auth-button" onclick="openAuthModal()" class="bg-gray-100 px-3 py-1 rounded-xl text-sm text-gray-600 hover:bg-gray-200 transition-colors flex items-center gap-1">
-                <i class="ph ph-user-circle"></i>
-                <span id="auth-status">登录/注册</span>
-            </button>
+            <div class="flex items-center gap-2">
+                <!-- 新增快速退出按钮 (只有登录后才显示) -->
+                <button id="logout-button-header" onclick="handleSignOut()" 
+                        class="hidden bg-red-100 px-3 py-1 rounded-xl text-xs text-red-600 hover:bg-red-200 transition-colors items-center gap-1">
+                    <i class="ph ph-sign-out"></i> 退出
+                </button>
+
+                <button id="auth-button" onclick="openAuthModal()" 
+                        class="bg-gray-100 px-3 py-1 rounded-xl text-sm text-gray-600 hover:bg-gray-200 transition-colors flex items-center gap-1">
+                    <i class="ph ph-user-circle"></i>
+                    <span id="auth-status">登录/注册</span>
+                </button>
+            </div>
             
             <!-- Desktop Nav (Hidden on Mobile) -->
             <nav class="hidden md:flex bg-gray-100/50 p-1 rounded-xl border border-gray-100">
@@ -252,7 +261,8 @@
                 <input type="text" id="modal-name" placeholder="名称 (如: 隐藏打卡点)" class="w-full bg-gray-50 border-0 rounded-xl p-3 ring-1 ring-gray-200 outline-none">
                 <div class="flex gap-2">
                     <select id="modal-type" class="bg-gray-50 border-0 rounded-xl p-3 ring-1 ring-gray-200 outline-none flex-grow"><option value="custom">✨ 私藏</option><option value="自然">🏔️ 自然</option><option value="人文">🕌 人文</option><option value="滑雪">🎿 滑雪</option></select>
-                    <button onclick="pickLocationFromModal()" class="bg-blue-50 text-blue-600 px-3 rounded-xl text-sm font-medium border border-blue-100 whitespace-nowrap hover:bg-blue-100 transition">📍 选位置</button>
+                    <!-- FIX: 移除选位置按钮，只显示坐标 -->
+                    <button onclick="pickLocationFromModal()" class="bg-gray-50 text-gray-600 px-3 rounded-xl text-sm font-medium border border-gray-200 whitespace-nowrap cursor-default">📍 选位置</button>
                 </div>
                 <textarea id="modal-desc" placeholder="备注..." class="w-full bg-gray-50 border-0 rounded-xl p-3 ring-1 ring-gray-200 h-20 outline-none resize-none"></textarea>
                 <div class="text-xs text-gray-400 text-center" id="modal-coords-display">坐标: 未设置</div>
@@ -349,11 +359,28 @@
             return parts[0];
         }
 
+        // FIX: Add function for displaying quick feedback in header badge
+        function showFeedbackMessage(message, isError = false) {
+            const headerBadgeEl = document.getElementById('sync-status-badge');
+            headerBadgeEl.textContent = message;
+            if (isError) {
+                headerBadgeEl.className = 'text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-100 align-middle';
+            } else {
+                headerBadgeEl.className = 'text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full border border-green-100 align-middle';
+            }
+            // Restore default sync status after a short delay
+            setTimeout(() => {
+                updateAuthStateUI(auth.currentUser); 
+            }, 3000);
+        }
+
+
         function updateAuthStateUI(user) {
             const statusEl = document.getElementById('auth-status');
             const headerBadgeEl = document.getElementById('sync-status-badge');
             const infoDiv = document.getElementById('auth-info');
             const formDiv = document.getElementById('auth-form');
+            const logoutHeaderBtn = document.getElementById('logout-button-header'); // FIX: Reference new button
 
             if (user) {
                 currentUserId = user.uid;
@@ -365,6 +392,10 @@
                 document.getElementById('user-email-display').textContent = username;
                 infoDiv.classList.remove('hidden');
                 formDiv.classList.add('hidden');
+
+                // FIX: Show header logout button
+                logoutHeaderBtn.classList.remove('hidden');
+                logoutHeaderBtn.classList.add('flex');
                 
             } else {
                 currentUserId = null;
@@ -374,6 +405,10 @@
                 
                 infoDiv.classList.add('hidden');
                 formDiv.classList.remove('hidden');
+
+                // FIX: Hide header logout button
+                logoutHeaderBtn.classList.add('hidden');
+                logoutHeaderBtn.classList.remove('flex');
             }
         }
 
@@ -452,6 +487,8 @@
                 console.log("Firestore Data Synced and App Rendered.");
             }, (error) => {
                 console.error("Firestore Listener Error:", error);
+                // FIX: Show error message if listener fails (e.g., due to rules)
+                showFeedbackMessage("同步失败！请检查 Firebase 规则。", true);
                 window.state.dataLoaded = true; 
                 window.renderApp();
             });
@@ -496,8 +533,9 @@
                 console.log("Data successfully queued for Firestore save."); // Log success for save
                 
             } catch (e) {
-                // FIX: Enhanced error logging for save failure
+                // FIX: Enhanced error logging and UI feedback for save failure
                 console.error("CRITICAL SAVE ERROR: Firestore write failed. Check your Firebase Rules.", e);
+                showFeedbackMessage("保存失败！请检查 Firestore 规则。", true);
             }
         }
 
@@ -800,8 +838,8 @@
         
         window.openAttractionModal = (reset = true) => {
             document.getElementById('attraction-modal').classList.remove('hidden'); 
+            const saveBtn = document.getElementById('save-spot-btn');
             
-            // Map Picking is removed. Coords default to center if reset=false and none set.
             if(reset){
                 // Reset form state
                 document.getElementById('modal-name').value=''; 
@@ -817,12 +855,22 @@
                  document.getElementById('modal-coords-display').innerText = 
                     `坐标: Lng:${Math.round(window.state.tempSpotCoords.lng * 1000) / 1000}, Lat:${Math.round(window.state.tempSpotCoords.lat * 1000) / 1000}`;
             }
+
+            // Always display default coordinates when modal opens for context
+            if (!window.state.tempSpotCoords) {
+                 window.state.tempSpotCoords = XINJIANG_CENTER;
+                 document.getElementById('modal-coords-display').innerText = 
+                    `坐标: Lng:${Math.round(XINJIANG_CENTER.lng * 1000) / 1000}, Lat:${Math.round(XINJIANG_CENTER.lat * 1000) / 1000} (默认)`;
+            }
+            
+            // Ensure button text is "保存" on open
+            saveBtn.innerText = '保 存';
+            saveBtn.classList.remove('bg-green-600', 'bg-red-600');
+            saveBtn.classList.add('bg-blue-600');
         }
         
         function pickLocationFromModal(){
-            // Since we removed the map, this function must be repurposed or mocked.
-            // For now, it simply assigns the default center coordinates, and gives feedback.
-            
+            // FIX: Remove actual map logic, simplifying to coordinate placeholder setting
             window.state.tempSpotCoords = XINJIANG_CENTER;
             
             const saveBtn = document.getElementById('save-spot-btn');
@@ -830,9 +878,15 @@
             
             coordsDisplay.innerText = `坐标: Lng:${Math.round(XINJIANG_CENTER.lng * 1000) / 1000}, Lat:${Math.round(XINJIANG_CENTER.lat * 1000) / 1000} (默认)`;
             
+            // Short UX feedback
             saveBtn.innerText = '已设置位置 (可保存)';
             saveBtn.classList.add('bg-green-600');
             saveBtn.classList.remove('bg-blue-600');
+            setTimeout(() => {
+                saveBtn.innerText = '保 存';
+                saveBtn.classList.remove('bg-green-600');
+                saveBtn.classList.add('bg-blue-600');
+            }, 1000);
             
             console.log("地点选取已完成，使用默认中心坐标。请点击保存。");
         }
@@ -842,7 +896,7 @@
             const n=nameInput.value;
             const saveBtn = document.getElementById('save-spot-btn');
             
-            // Coordinate requirement check (Now checks if *any* coordinates are set, including default)
+            // Coordinate check: Uses XINJIANG_CENTER if temp is null
             const finalCoords = window.state.tempSpotCoords || XINJIANG_CENTER;
 
             // --- FIX 1: Visual feedback for missing name ---
@@ -856,9 +910,21 @@
 
             let imageUrl = null;
             if (currentModalImageBase64 && window.uploadImageAndGetUrl) {
+                // FIX: Check for unauthenticated state before attempting upload
                 if (!window.currentUserId) {
                     console.error("图片上传失败: 请先登录账户 (或注册) 才能上传图片。");
-                    return; 
+                    
+                    saveBtn.innerText = '需登录才能上传图片！'; // Immediate feedback
+                    saveBtn.classList.remove('bg-blue-600', 'bg-green-600');
+                    saveBtn.classList.add('bg-red-600');
+                    
+                    setTimeout(() => {
+                        saveBtn.innerText = '保 存';
+                        saveBtn.classList.remove('bg-red-600');
+                        saveBtn.classList.add('bg-blue-600');
+                    }, 2500);
+                    
+                    return; // EXIT
                 }
 
                 saveBtn.innerHTML = '<i class="ph ph-spinner-gap animate-spin"></i> 上传中...';
