@@ -3,47 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>新疆旅行规划 | Pro版</title>
+    <title>新疆旅行规划师 Pro | GitHub部署版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
         
-        body { font-family: 'Noto Sans SC', sans-serif; background-color: #F8FAFC; color: #334155; padding-bottom: 80px; /* 为底部导航留白 */ }
+        body { font-family: 'Noto Sans SC', sans-serif; background-color: #F1F5F9; color: #334155; padding-bottom: 80px; }
         
         /* 交互动效 */
         .tab-content { display: none; animation: fadeIn 0.3s ease-out; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         
-        .hover-card { transition: all 0.3s; }
-        .hover-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -10px rgba(0,0,0,0.1); }
-
-        /* 地图画布容器 */
         #map-wrapper {
             background-color: #e5e7eb;
             background-image: linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px);
             background-size: 40px 40px;
             cursor: grab; overflow: hidden; position: relative;
-            touch-action: none; /* 禁止浏览器默认触摸行为(如滚动)以便地图拖拽 */
+            touch-action: none;
         }
         #map-wrapper:active { cursor: grabbing; }
 
-        .day-card.active { border-left-color: #3B82F6; background-color: #EFF6FF; }
-        
-        /* 滚动条 */
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-
         /* 移动端底部导航激活态 */
         .mobile-nav-btn.active { color: #2563EB; }
-        .mobile-nav-btn.active i { font-weight: bold; }
-        
-        /* 预算列表项进入动画 */
-        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
-        .budget-item-enter { animation: slideIn 0.3s ease-out forwards; }
     </style>
 </head>
 <body class="flex flex-col min-h-screen">
@@ -53,12 +37,16 @@
         <div class="container mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center gap-2">
                 <div class="bg-blue-600 text-white p-1.5 rounded-lg shadow-md shadow-blue-500/30">
-                    <i class="ph ph-airplane-tilt text-xl"></i>
+                    <i class="ph ph-lock text-xl"></i>
                 </div>
-                <div>
-                    <h1 class="font-bold text-gray-800 text-base leading-tight">新疆规划师 <span class="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-100 align-middle">V3.4</span></h1>
-                </div>
+                <h1 class="font-bold text-gray-800 text-base leading-tight">新疆规划师 <span class="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-100 align-middle" id="sync-status-badge">需登录</span></h1>
             </div>
+            
+            <!-- 登录/Profile Button -->
+            <button id="auth-button" onclick="openAuthModal()" class="bg-gray-100 px-3 py-1 rounded-xl text-sm text-gray-600 hover:bg-gray-200 transition-colors flex items-center gap-1">
+                <i class="ph ph-user-circle"></i>
+                <span id="auth-status">登录/注册</span>
+            </button>
             
             <!-- Desktop Nav (Hidden on Mobile) -->
             <nav class="hidden md:flex bg-gray-100/50 p-1 rounded-xl border border-gray-100">
@@ -74,55 +62,41 @@
     <main class="flex-grow container mx-auto px-4 py-4">
 
         <!-- 1. 景点百科 -->
-        <section id="explore" class="tab-content">
+        <section id="explore" class="tab-content active">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold text-gray-800">景点发现</h2>
-                <button onclick="openAttractionModal(true)" class="bg-blue-600 active:bg-blue-700 text-white px-3 py-2 rounded-xl shadow-lg shadow-blue-500/30 flex items-center gap-1 text-xs transition-transform active:scale-95">
+                <button onclick="openAttractionModal(true)" class="bg-blue-600 active:bg-blue-700 text-white px-3 py-2 rounded-xl shadow-lg flex items-center gap-1 text-xs transition-transform active:scale-95">
                     <i class="ph ph-plus-bold"></i> 自定义
                 </button>
             </div>
-            
-            <!-- 搜索栏 (Mobile Optimized) -->
             <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 mb-4 flex flex-col gap-3 sticky top-16 z-30">
                 <div class="relative w-full">
                     <i class="ph ph-magnifying-glass absolute left-3 top-3 text-gray-400"></i>
-                    <input type="text" id="explore-search" placeholder="搜景点..." class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <input type="text" id="explore-search" placeholder="搜景点..." class="w-full bg-gray-50 border-0 rounded-xl pl-9 pr-3 py-2.5 text-sm ring-1 ring-gray-200 outline-none">
                 </div>
                 <div class="flex overflow-x-auto gap-2 pb-1 custom-scrollbar">
-                    <select id="explore-filter" class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs outline-none flex-shrink-0">
-                        <option value="all">全部类型</option>
-                        <option value="自然">🏔️ 自然</option>
-                        <option value="人文">🕌 人文</option>
-                        <option value="滑雪">🎿 滑雪</option>
-                        <option value="custom">✨ 自定义</option>
+                    <select id="explore-filter" class="bg-gray-50 border-0 rounded-xl px-3 py-2 text-xs outline-none flex-shrink-0 ring-1 ring-gray-200">
+                        <option value="all">全部类型</option><option value="自然">🏔️ 自然</option><option value="人文">🕌 人文</option><option value="滑雪">🎿 滑雪</option><option value="custom">✨ 自定义</option>
                     </select>
                 </div>
             </div>
-
             <div id="explore-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-20"></div>
         </section>
 
-        <!-- 2. 交互地图 (Mobile Optimized Layout) -->
+        <!-- 2. 交互地图 -->
         <section id="routes" class="tab-content">
-            <!-- 手机端改为上下布局：上部分列表，中间地图，下部分添加 -->
             <div class="flex flex-col lg:grid lg:grid-cols-12 gap-4 h-auto lg:h-[calc(100vh-100px)]">
-                
-                <!-- 1. 天数选择 (Mobile: Horizontal Scroll, Desktop: Vertical) -->
                 <div class="lg:col-span-3 flex flex-col gap-3 bg-white p-3 rounded-2xl shadow-sm border border-gray-100 order-2 lg:order-1">
                     <div class="flex justify-between items-center">
                         <h3 class="font-bold text-gray-800 text-sm">📅 行程</h3>
                         <button onclick="addDay()" class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100">+ 天数</button>
                     </div>
-                    <!-- 手机端横向滚动 -->
                     <div id="day-list" class="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto custom-scrollbar pb-2 lg:pb-0 h-auto lg:h-1/2"></div>
-                    
                     <div class="mt-2 border-t pt-2 lg:h-1/2 lg:flex-col lg:flex hidden lg:flex">
                          <h3 class="font-bold text-gray-800 mb-2 text-xs">📍 当日明细</h3>
                          <div id="day-spots-list-desktop" class="flex-grow overflow-y-auto space-y-2 pr-1 custom-scrollbar text-xs"></div>
                     </div>
                 </div>
-
-                <!-- 2. 地图 (Mobile: Fixed Height, Desktop: Auto) -->
                 <div class="lg:col-span-6 bg-white rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden flex flex-col group order-1 lg:order-2">
                     <div class="absolute top-3 left-3 z-10">
                          <div class="bg-white/90 backdrop-blur px-2 py-1 rounded shadow-sm text-[10px] font-medium border border-gray-200 text-gray-600">
@@ -136,22 +110,17 @@
                             <button onclick="zoomMap(-0.2)" class="p-2 text-gray-600"><i class="ph ph-minus"></i></button>
                         </div>
                     </div>
-                    <!-- 手机端给个固定高度 -->
                     <div class="relative w-full h-[350px] lg:h-full" id="map-wrapper">
                         <canvas id="route-canvas" class="block"></canvas>
                         <div id="map-tooltip" class="absolute hidden bg-gray-900/90 text-white text-xs px-2 py-1 rounded pointer-events-none z-20 whitespace-nowrap"></div>
                     </div>
-                    <div class="p-2 bg-gray-50 text-[10px] text-gray-400 text-center">👆 单指拖拽 • 双指/滚轮缩放</div>
+                    <div class="p-2 bg-gray-50 text-[10px] text-gray-400 text-center">👆 拖拽 • 滚轮/双指缩放</div>
                 </div>
-
-                <!-- 3. 当前天景点 & 添加 (Mobile: Below Map) -->
                 <div class="lg:col-span-3 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full order-3">
-                    <!-- Mobile only: Show spot list here -->
                     <div class="lg:hidden mb-4">
                         <h3 class="font-bold text-gray-800 mb-2 text-sm">📍 当日景点 (<span id="day-spot-count">0</span>)</h3>
                         <div id="day-spots-list-mobile" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar text-xs"></div>
                     </div>
-
                     <h3 class="font-bold text-gray-800 mb-3 text-sm">➕ 添加景点</h3>
                     <input type="text" id="spot-search" placeholder="搜索..." class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3 outline-none">
                     <div id="all-spots-list" class="flex-grow overflow-y-auto space-y-2 pr-1 custom-scrollbar max-h-60 lg:max-h-none"></div>
@@ -162,18 +131,15 @@
         <!-- 3. 智能预算 -->
         <section id="budget" class="tab-content">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 pb-20">
-                <!-- 自定义添加 -->
                 <div class="lg:col-span-5 space-y-4">
                     <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                         <div class="flex items-center gap-2 mb-3 text-blue-600 text-sm font-bold"><i class="ph ph-plus-circle text-lg"></i> 添加支出</div>
                         <div class="flex gap-2">
-                            <input type="text" id="custom-item-name" placeholder="项目 (如:滑雪)" class="flex-grow bg-gray-50 border-0 rounded-lg px-3 py-2 text-sm ring-1 ring-gray-200 focus:ring-blue-500 outline-none">
-                            <input type="number" id="custom-item-price" placeholder="¥" class="w-20 bg-gray-50 border-0 rounded-lg px-3 py-2 text-sm ring-1 ring-gray-200 focus:ring-blue-500 outline-none">
+                            <input type="text" id="custom-item-name" placeholder="项目 (如:滑雪票)" class="flex-grow bg-gray-50 border-0 rounded-lg px-3 py-2 text-sm ring-1 ring-gray-200 outline-none">
+                            <input type="number" id="custom-item-price" placeholder="¥" class="w-20 bg-gray-50 border-0 rounded-lg px-3 py-2 text-sm ring-1 ring-gray-200 outline-none">
                             <button onclick="addCustomBudgetItem()" class="bg-blue-600 text-white px-3 rounded-lg"><i class="ph ph-check-bold"></i></button>
                         </div>
                     </div>
-                    
-                    <!-- 基础参数 -->
                     <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                         <h3 class="font-bold text-gray-800 mb-3 text-sm">基础设定</h3>
                         <div class="grid grid-cols-2 gap-3 text-sm">
@@ -186,19 +152,13 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- 结果面板 -->
                 <div class="lg:col-span-7">
                     <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-5 rounded-3xl shadow-xl text-white relative overflow-hidden">
                         <div class="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
-                        
                         <div class="mb-4">
-                            <h2 class="text-lg font-bold mb-4 flex items-center gap-2 opacity-90"><i class="ph ph-receipt"></i> 预算清单</h2>
-                            <div id="budget-summary-list" class="space-y-2 text-sm text-blue-50 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
-                                <!-- JS Injected -->
-                            </div>
+                            <h2 class="text-lg font-bold mb-4 opacity-90">预算清单</h2>
+                            <div id="budget-summary-list" class="space-y-2 text-sm text-blue-50 max-h-[300px] overflow-y-auto custom-scrollbar pr-1"></div>
                         </div>
-
                         <div class="pt-4 border-t border-white/10 flex justify-between items-end">
                             <div>
                                 <div class="text-blue-200 text-xs">预估总计</div>
@@ -219,14 +179,16 @@
                 <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 text-center"><div class="text-[10px] text-gray-400">准备</div><div class="text-lg font-bold text-green-600"><span id="dash-pack">0</span>%</div></div>
                 <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 text-center"><div class="text-[10px] text-gray-400">滑雪点</div><div class="text-lg font-bold text-purple-600"><span id="dash-ski-spots">0</span></div></div>
             </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-20">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 pb-20">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"><h3 class="text-sm font-bold text-gray-700 mb-2">资金占比</h3><div class="h-48"><canvas id="budgetDoughnutChart"></canvas></div></div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"><h3 class="text-sm font-bold text-gray-700 mb-2">玩法分布</h3><div class="h-48"><canvas id="spotPolarChart"></canvas></div></div>
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 class="text-sm font-bold text-gray-700 mb-2">资金占比</h3>
-                    <div class="h-48"><canvas id="budgetDoughnutChart"></canvas></div>
-                </div>
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 class="text-sm font-bold text-gray-700 mb-2">玩法分布</h3>
-                    <div class="h-48"><canvas id="spotPolarChart"></canvas></div>
+                    <h3 class="text-sm font-bold text-gray-700 mb-2">奇景预测 (-<span id="temp-val">-20</span>°C)</h3>
+                    <input type="range" id="temp-slider" min="-40" max="5" value="-20" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mb-4">
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div><div class="text-gray-500 mb-1">晨雾</div><div class="font-bold text-gray-800" id="prob-fog">85%</div></div>
+                        <div><div class="text-gray-500 mb-1">蓝冰</div><div class="font-bold text-gray-800" id="prob-ice">90%</div></div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -235,10 +197,7 @@
         <section id="pack" class="tab-content">
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
                 <div class="flex items-center gap-4 mb-4">
-                    <div class="w-16 h-16 relative flex-shrink-0">
-                        <canvas id="packChart"></canvas>
-                        <div class="absolute inset-0 flex items-center justify-center text-xs font-bold text-blue-600" id="pack-percent-text">0%</div>
-                    </div>
+                    <div class="w-16 h-16 relative flex-shrink-0"><canvas id="packChart"></canvas><div class="absolute inset-0 flex items-center justify-center text-xs font-bold text-blue-600" id="pack-percent-text">0%</div></div>
                     <div class="flex-grow">
                         <h2 class="font-bold text-gray-800">准备进度</h2>
                         <p class="text-xs text-gray-400 mt-1">已选 <span id="pack-checked-count">0</span> / <span id="pack-total-count">0</span></p>
@@ -251,132 +210,377 @@
         </section>
     </main>
 
-    <!-- Mobile Bottom Navigation (Visible < 768px) -->
+    <!-- Mobile Bottom Navigation -->
     <nav class="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 z-50 flex justify-around items-center pb-safe pt-2 px-1 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <button onclick="switchTab('explore')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400 active" data-tab="explore">
-            <i class="ph ph-mountains text-2xl mb-0.5"></i><span class="text-[10px]">百科</span>
+        <button onclick="switchTab('explore')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400 active" data-tab="explore"><i class="ph ph-mountains text-2xl"></i><span class="text-[10px]">百科</span></button>
+        <button onclick="switchTab('routes')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="routes"><i class="ph ph-map-trifold text-2xl"></i><span class="text-[10px]">地图</span></button>
+        <button onclick="openAuthModal()" class="flex flex-col items-center justify-center w-12 h-12 bg-blue-600 rounded-full text-white shadow-lg -mt-6 border-4 border-white" title="账户">
+            <i class="ph ph-user text-2xl"></i>
         </button>
-        <button onclick="switchTab('routes')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="routes">
-            <i class="ph ph-map-trifold text-2xl mb-0.5"></i><span class="text-[10px]">地图</span>
-        </button>
-        <!-- Center Action Button -->
-        <button onclick="openAttractionModal(true)" class="flex flex-col items-center justify-center w-12 h-12 bg-blue-600 rounded-full text-white shadow-lg -mt-6 border-4 border-gray-50">
-            <i class="ph ph-plus text-2xl"></i>
-        </button>
-        <button onclick="switchTab('budget')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="budget">
-            <i class="ph ph-calculator text-2xl mb-0.5"></i><span class="text-[10px]">预算</span>
-        </button>
-        <button onclick="switchTab('data')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="data">
-            <i class="ph ph-chart-pie-slice text-2xl mb-0.5"></i><span class="text-[10px]">统计</span>
-        </button>
+        <button onclick="switchTab('budget')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="budget"><i class="ph ph-calculator text-2xl"></i><span class="text-[10px]">预算</span></button>
+        <button onclick="switchTab('data')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="data"><i class="ph ph-chart-pie-slice text-2xl"></i><span class="text-[10px]">统计</span></button>
     </nav>
 
-    <!-- Modal (Universal) -->
+    <!-- Modal: 自定义景点 -->
     <div id="attraction-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl w-full max-w-sm p-5 shadow-2xl animate-[fadeIn_0.2s_ease-out]">
-            <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-gray-800">自定义地点</h3><button onclick="closeModal()" class="text-gray-400"><i class="ph ph-x text-xl"></i></button></div>
+            <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-gray-800">自定义地点</h3><button onclick="closeModal('attraction-modal')" class="text-gray-400"><i class="ph ph-x text-xl"></i></button></div>
+            
             <div class="space-y-3">
-                <input type="text" id="modal-name" placeholder="名称 (如: 隐藏打卡点)" class="w-full bg-gray-50 border-0 rounded-xl p-3 text-sm ring-1 ring-gray-200 focus:ring-blue-500 outline-none">
+                <div class="relative group cursor-pointer" onclick="document.getElementById('modal-img-input').click()">
+                    <div id="modal-img-preview" class="w-full h-24 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 group-hover:bg-gray-50 group-hover:border-blue-300 transition overflow-hidden">
+                        <i class="ph ph-image text-2xl mb-1"></i><span class="text-xs">点击添加封面图片 (可选)</span>
+                    </div>
+                    <input type="file" id="modal-img-input" accept="image/*" class="hidden" onchange="previewImage(this)">
+                </div>
+                
+                <input type="text" id="modal-name" placeholder="名称 (如: 隐藏打卡点)" class="w-full bg-gray-50 border-0 rounded-xl p-3 ring-1 ring-gray-200 outline-none">
                 <div class="flex gap-2">
-                    <select id="modal-type" class="bg-gray-50 border-0 rounded-xl p-3 text-sm ring-1 ring-gray-200 outline-none flex-grow">
-                        <option value="custom">✨ 私藏</option><option value="自然">🏔️ 自然</option><option value="人文">🕌 人文</option><option value="滑雪">🎿 滑雪</option>
-                    </select>
+                    <select id="modal-type" class="bg-gray-50 border-0 rounded-xl p-3 ring-1 ring-gray-200 outline-none flex-grow"><option value="custom">✨ 私藏</option><option value="自然">🏔️ 自然</option><option value="人文">🕌 人文</option><option value="滑雪">🎿 滑雪</option></select>
                     <button onclick="pickLocationFromModal()" class="bg-blue-50 text-blue-600 px-3 rounded-xl text-sm font-medium border border-blue-100 whitespace-nowrap">📍 选位置</button>
                 </div>
-                <textarea id="modal-desc" placeholder="备注..." class="w-full bg-gray-50 border-0 rounded-xl p-3 text-sm ring-1 ring-gray-200 h-20 outline-none resize-none"></textarea>
+                <textarea id="modal-desc" placeholder="备注..." class="w-full bg-gray-50 border-0 rounded-xl p-3 ring-1 ring-gray-200 h-20 outline-none resize-none"></textarea>
                 <div class="text-xs text-gray-400 text-center" id="modal-coords-display">坐标: 未设置</div>
             </div>
             <button onclick="saveCustomSpot()" class="w-full mt-5 bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-500/30">保 存</button>
         </div>
     </div>
 
+    <!-- Modal: 登录/注册 (Username based) -->
+    <div id="auth-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-[fadeIn_0.2s_ease-out]">
+            <div id="auth-info" class="mb-4 hidden">
+                <h3 class="text-xl font-bold text-gray-800 mb-2">欢迎回来</h3>
+                <p class="text-sm text-gray-600 truncate">账户: <span id="user-email-display" class="font-medium"></span></p>
+                <button onclick="handleSignOut()" class="w-full mt-4 bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition">退出登录</button>
+            </div>
+
+            <div id="auth-form">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-800" id="auth-title">登录账户</h3>
+                    <button onclick="closeModal('auth-modal')" class="text-gray-400"><i class="ph ph-x text-xl"></i></button>
+                </div>
+                <input type="text" id="auth-username" placeholder="账户名" class="w-full mb-3 bg-gray-50 border-0 rounded-lg p-3 ring-1 ring-gray-200 outline-none">
+                <input type="password" id="auth-password" placeholder="密码 (至少6位)" class="w-full mb-3 bg-gray-50 border-0 rounded-lg p-3 ring-1 ring-gray-200 outline-none">
+                <input type="password" id="auth-password-confirm" placeholder="确认密码" class="w-full mb-3 bg-gray-50 border-0 rounded-lg p-3 ring-1 ring-gray-200 outline-none hidden">
+                <p id="auth-error" class="text-red-500 text-xs mb-3"></p>
+
+                <button onclick="handleAuthAction()" id="auth-submit-btn" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition">登录</button>
+                <button onclick="toggleAuthMode()" id="auth-toggle-btn" class="w-full mt-3 text-sm text-blue-600 hover:underline">切换到注册</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        
+        setLogLevel('debug'); // Enable Firestore logging
+
+        // --- DEPLOYMENT CONFIGURATION ---
+        
+        // 1. Canvas Globals (Used if running inside the platform)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // 2. Default/Placeholder Config for GitHub Pages deployment
+        const defaultFirebaseConfig = {
+            apiKey: "YOUR_FIREBASE_API_KEY", // <-- ⚠️ REPLACE THIS FOR LIVE DEPLOYMENT
+            authDomain: "your-project-id.firebaseapp.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project-id.appspot.com",
+            messagingSenderId: "1234567890",
+            appId: "1:1234567890:web:abcdef123456"
+        };
+
+        // If running in Canvas, use the provided config string; otherwise, use the default placeholder object.
+        const configToUse = typeof __firebase_config !== 'undefined' && __firebase_config ? JSON.parse(__firebase_config) : defaultFirebaseConfig;
+        const firebaseConfig = configToUse;
+        
+        // --- END CONFIGURATION ---
+
+        let app, db, auth;
+        let authMode = 'login'; // 'login' or 'register'
+        let currentUserId = null;
+        let isAuthReady = false;
+
+        // Reference to window functions for external use
+        window.openAuthModal = openAuthModal;
+        window.toggleAuthMode = toggleAuthMode;
+        window.handleAuthAction = handleAuthAction;
+        window.handleSignOut = handleSignOut;
+        window.saveUserData = saveUserData;
+        window.loadUserData = loadUserData;
+
+        function getUsernameFromEmail(email) {
+            if (!email) return 'N/A';
+            const parts = email.split('@');
+            return parts[0];
+        }
+
+        function updateAuthStateUI(user) {
+            const statusEl = document.getElementById('auth-status');
+            const headerBadgeEl = document.getElementById('sync-status-badge');
+            const infoDiv = document.getElementById('auth-info');
+            const formDiv = document.getElementById('auth-form');
+
+            if (user) {
+                currentUserId = user.uid;
+                const username = getUsernameFromEmail(user.email);
+                statusEl.textContent = username;
+                headerBadgeEl.textContent = '已同步';
+                headerBadgeEl.className = 'text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full border border-green-100 align-middle';
+                
+                document.getElementById('user-email-display').textContent = username;
+                infoDiv.classList.remove('hidden');
+                formDiv.classList.add('hidden');
+                
+                loadUserData();
+
+            } else {
+                currentUserId = null;
+                statusEl.textContent = '登录/注册';
+                headerBadgeEl.textContent = '需登录';
+                headerBadgeEl.className = 'text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-100 align-middle';
+                
+                infoDiv.classList.add('hidden');
+                formDiv.classList.remove('hidden');
+            }
+        }
+
+        async function initAuthAndDb() {
+            try {
+                if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_FIREBASE_API_KEY") {
+                    console.warn("WARNING: Firebase configuration is using placeholders. Data will not persist outside the Canvas environment.");
+                }
+                
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                await setPersistence(auth, browserLocalPersistence);
+
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    isAuthReady = true;
+                    updateAuthStateUI(user);
+                    // Initial rendering when auth state is confirmed
+                    if (!window.state.initialized) {
+                       window.renderExploreGrid(); window.renderDayList(); window.renderAllSpots(); window.renderBudget(); window.renderGear(); window.initCharts();
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+            }
+        }
+
+        async function saveUserData() {
+            if (!currentUserId || !isAuthReady) {
+                console.warn("User not authenticated, skipping save.");
+                return;
+            }
+
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'data', 'state');
+                const dataToSave = {
+                    spots: window.state.spots.filter(s => s.id > 1000), 
+                    itinerary: JSON.stringify(window.state.itinerary), 
+                    customBudget: window.state.customBudget,
+                    customGear: window.state.customGear,
+                    lastSave: new Date().toISOString()
+                };
+
+                await setDoc(docRef, dataToSave, { merge: true });
+                console.log("Data saved successfully to Firestore.");
+            } catch (e) {
+                console.error("Error saving document: ", e);
+            }
+        }
+
+        async function loadUserData() {
+            if (!currentUserId || !isAuthReady) return;
+
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'data', 'state');
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    console.log("Data loaded from Firestore.");
+                    
+                    window.state.spots = [...window.defaultSpots, ...data.spots];
+                    window.state.itinerary = JSON.parse(data.itinerary); 
+                    window.state.customBudget = data.customBudget || [];
+                    window.state.customGear = data.customGear || [];
+                    
+                    window.renderExploreGrid(); window.renderDayList(); window.renderAllSpots(); window.renderBudget(); window.renderGear();
+                    window.updateCharts(); window.updateDashboard();
+                    
+                } else {
+                    console.log("No saved data found. Using defaults.");
+                }
+
+                window.state.initialized = true;
+
+            } catch (e) {
+                console.error("Error loading document: ", e);
+            }
+        }
+
+        // --- AUTH UI HANDLERS ---
+
+        function openAuthModal() {
+            document.getElementById('auth-modal').classList.remove('hidden');
+        }
+        
+        function toggleAuthMode() {
+            const title = document.getElementById('auth-title');
+            const submitBtn = document.getElementById('auth-submit-btn');
+            const toggleBtn = document.getElementById('auth-toggle-btn');
+            const confirmPass = document.getElementById('auth-password-confirm');
+            const errorEl = document.getElementById('auth-error');
+            errorEl.textContent = '';
+
+            if (authMode === 'login') {
+                authMode = 'register';
+                title.textContent = '注册新账户';
+                submitBtn.textContent = '注册';
+                toggleBtn.textContent = '已有账户？切换到登录';
+                confirmPass.classList.remove('hidden');
+            } else {
+                authMode = 'login';
+                title.textContent = '登录账户';
+                submitBtn.textContent = '登录';
+                toggleBtn.textContent = '没有账户？切换到注册';
+                confirmPass.classList.add('hidden');
+            }
+        }
+
+        async function handleAuthAction() {
+            const username = document.getElementById('auth-username').value;
+            const password = document.getElementById('auth-password').value;
+            const confirmPassword = document.getElementById('auth-password-confirm').value;
+            const errorEl = document.getElementById('auth-error');
+            errorEl.textContent = '';
+
+            if (!username || password.length < 6) {
+                errorEl.textContent = '账户名不能为空，密码至少6位。';
+                return;
+            }
+
+            if (authMode === 'register' && password !== confirmPassword) {
+                errorEl.textContent = '两次输入的密码不一致。';
+                return;
+            }
+
+            // Construct Firebase-compatible email
+            const email = `${username}@canvas.local`;
+
+            try {
+                if (authMode === 'register') {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                    alert("注册成功！数据已为您初始化。");
+                    saveUserData();
+                } else {
+                    await signInWithEmailAndPassword(auth, email, password);
+                }
+                
+                document.getElementById('auth-modal').classList.add('hidden');
+
+            } catch (error) {
+                let errorMessage = '认证失败。';
+                if (error.code === 'auth/email-already-in-use') errorMessage = '该账户名已被注册。';
+                if (error.code === 'auth/invalid-credential') errorMessage = '账户名或密码错误。';
+                errorEl.textContent = errorMessage;
+                console.error("Auth Error:", error);
+            }
+        }
+
+        async function handleSignOut() {
+            try {
+                await signOut(auth);
+                alert("您已退出登录，当前数据不会被保存。");
+                document.getElementById('auth-modal').classList.add('hidden');
+                window.location.reload(); 
+            } catch (error) {
+                console.error("Sign Out Error:", error);
+            }
+        }
+
+        initAuthAndDb();
+
+    </script>
     <script>
-        // --- 核心逻辑 ---
+        // --- 核心数据 (Global State) ---
         const defaultSpots = [
             { id: 1, name: "乌鲁木齐", type: "人文", desc: "首府", x: 500, y: 300, tags: ["中转"] },
             { id: 2, name: "禾木村", type: "自然", desc: "晨雾", x: 450, y: 100, tags: ["摄影"] },
             { id: 3, name: "喀纳斯", type: "自然", desc: "湖怪", x: 400, y: 80, tags: ["徒步"] },
             { id: 4, name: "赛里木湖", type: "自然", desc: "蓝冰", x: 200, y: 350, tags: ["自驾"] },
-            { id: 5, name: "喀什", type: "人文", desc: "古城", x: 100, y: 800, tags: ["美食"] },
-            { id: 6, name: "可可托海", type: "滑雪", desc: "滑雪", x: 600, y: 150, tags: ["极限"] }
+            { id: 5, name: "喀什古城", type: "人文", desc: "古城", x: 100, y: 800, tags: ["美食"] },
+            { id: 6, name: "可可托海", type: "滑雪", desc: "滑雪", x: 600, y: 150, tags: ["极限"] },
         ];
-        const defaultGear = { "证件": ["身份证","驾照"], "衣物": ["羽绒服","保暖衣","雪地靴"], "滑雪": ["手套","护目镜"], "药品": ["感冒药","肠胃药"] };
-        
-        let state = {
-            spots: [...defaultSpots], itinerary: [[]], currentDayIndex: 0, customBudget: [], customGear: [],
-            isPickingMode: false, mapScale: 1, mapOffset: {x:0,y:0}, isDragging: false, startDrag: {x:0,y:0}, tempSpotData: null
+        window.defaultSpots = defaultSpots;
+
+        const defaultGear = {
+            "核心保暖": ["羽绒服", "冲锋衣", "保暖内衣", "羊毛袜", "雪地靴"],
+            "滑雪装备": ["头盔", "雪镜", "护脸", "手套", "护具"],
         };
 
-        document.addEventListener('DOMContentLoaded', () => {
-            renderExploreGrid(); renderDayList(); renderAllSpots(); renderBudget(); renderGear(); initCharts();
-            setTimeout(() => { initMapEvents(); renderMap(); }, 100);
-            
-            // Event Listeners
-            document.getElementById('explore-search').addEventListener('input', renderExploreGrid);
-            document.getElementById('explore-filter').addEventListener('change', renderExploreGrid);
-            document.getElementById('spot-search').addEventListener('input', renderAllSpots);
-            ['budget-people','price-stay','price-trans','price-food','price-ticket'].forEach(id=>document.getElementById(id).addEventListener('input',renderBudget));
-            
-            // Mobile Nav Logic
-            document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
-                btn.addEventListener('click', () => switchTab(btn.dataset.tab));
-            });
-        });
-
-        // --- 1. Map Engine (Touch Support Added) ---
-        function initMapEvents() {
-            const w = document.getElementById('map-wrapper');
-            
-            // Mouse
-            w.addEventListener('wheel', e => { e.preventDefault(); zoomMap(e.deltaY>0?0.9:1.1); });
-            w.addEventListener('mousedown', e => { state.isDragging=true; state.startDrag={x:e.clientX,y:e.clientY}; w.style.cursor='grabbing'; if(state.isPickingMode) handleMapClick(e.clientX, e.clientY, w); });
-            window.addEventListener('mousemove', e => { if(state.isDragging) handleDrag(e.clientX, e.clientY); });
-            window.addEventListener('mouseup', () => { state.isDragging=false; w.style.cursor=state.isPickingMode?'crosshair':'grab'; });
-
-            // Touch (New!)
-            w.addEventListener('touchstart', e => { 
-                if(e.touches.length === 1) {
-                    state.isDragging=true; 
-                    state.startDrag={x:e.touches[0].clientX, y:e.touches[0].clientY};
-                }
-            }, {passive: false});
-            
-            w.addEventListener('touchmove', e => {
-                if(state.isDragging && e.touches.length === 1) {
-                    e.preventDefault(); // Prevent scroll
-                    handleDrag(e.touches[0].clientX, e.touches[0].clientY);
-                }
-            }, {passive: false});
-
-            w.addEventListener('touchend', () => { state.isDragging=false; });
+        window.state = {
+            spots: [...defaultSpots], itinerary: [[]], currentDayIndex: 0,
+            customBudget: [], customGear: [], weatherTemp: -20,
+            isPickingMode: false, mapScale: 1, mapOffset: {x:0,y:0}, isDragging: false, startDrag: {x:0,y:0}, tempSpotData: null,
+            initialized: false
+        };
+        
+        let saveTimeout;
+        function debounceSave() {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                if (window.saveUserData) window.saveUserData();
+            }, 1500);
         }
 
+        // Global Chart Variables
+        let budgetChart, polarChart, packChart;
+        let currentModalImageBase64 = null; 
+
+        // --- 1. Map Engine ---
+        function initMapEvents() {
+            const w = document.getElementById('map-wrapper');
+            w.addEventListener('wheel', e => { e.preventDefault(); zoomMap(e.deltaY>0?0.9:1.1); });
+            w.addEventListener('mousedown', e => { state.isDragging=true; state.startDrag={x:e.clientX,y:e.clientY}; w.style.cursor='grabbing'; if(state.isPickingMode) handleMapClick(e.clientX, e.clientY, w); });
+            window.addEventListener('mousemove', e => { if(state.isDragging) handleDrag(e.clientX, e.clientY); handleMapHover(e); });
+            window.addEventListener('mouseup', () => { state.isDragging=false; w.style.cursor=state.isPickingMode?'crosshair':'grab'; });
+            w.addEventListener('touchstart', e => { if(e.touches.length === 1) { state.isDragging=true; state.startDrag={x:e.touches[0].clientX, y:e.touches[0].clientY}; } }, {passive: false});
+            w.addEventListener('touchmove', e => { if(state.isDragging && e.touches.length === 1) { e.preventDefault(); handleDrag(e.touches[0].clientX, e.touches[0].clientY); } }, {passive: false});
+            w.addEventListener('touchend', () => { state.isDragging=false; });
+        }
         function handleDrag(cx, cy) {
-            const dx = cx - state.startDrag.x;
-            const dy = cy - state.startDrag.y;
+            const dx = cx - state.startDrag.x, dy = cy - state.startDrag.y;
             state.mapOffset.x += dx; state.mapOffset.y += dy;
             state.startDrag = {x:cx, y:cy};
             renderMap();
         }
-
         function zoomMap(delta) { const ns=state.mapScale+delta; if(ns>0.2 && ns<5) { state.mapScale=ns; renderMap(); } }
         function resetMapView() { state.mapScale=1; state.mapOffset={x:0,y:0}; renderMap(); }
-
         function renderMap() {
             const cvs=document.getElementById('route-canvas'), ctx=cvs.getContext('2d'), w=document.getElementById('map-wrapper');
             cvs.width=w.offsetWidth; cvs.height=w.offsetHeight; ctx.clearRect(0,0,cvs.width,cvs.height);
             ctx.save(); ctx.translate(cvs.width/2+state.mapOffset.x, cvs.height/2+state.mapOffset.y); ctx.scale(state.mapScale,state.mapScale); ctx.translate(-cvs.width/2,-cvs.height/2);
-            
-            const vs=1000, stX=(cvs.width-vs)/2, stY=(cvs.height-vs)/2; // Virtual canvas 1000x1000 centered
-
-            // Lines
+            const vs=1000, stX=(cvs.width-vs)/2, stY=(cvs.height-vs)/2;
             state.itinerary.forEach((dS,di)=>{
-                if(dS.length<2)return; ctx.beginPath(); ctx.strokeStyle=di===state.currentDayIndex?'#2563EB':'#CBD5E1'; ctx.lineWidth=di===state.currentDayIndex?3/state.mapScale:2/state.mapScale;
-                ctx.setLineDash(di===state.currentDayIndex?[]:[5,5]);
+                if(dS.length<2)return; ctx.beginPath(); ctx.strokeStyle=di===state.currentDayIndex?'#2563EB':'#CBD5E1'; ctx.lineWidth=di===state.currentDayIndex?4/state.mapScale:2/state.mapScale; ctx.setLineDash(di===state.currentDayIndex?[]:[5,5]);
                 dS.forEach((id,idx)=>{const s=state.spots.find(sp=>sp.id===id); if(s) idx===0?ctx.moveTo(stX+s.x,stY+s.y):ctx.lineTo(stX+s.x,stY+s.y);}); ctx.stroke();
             });
-
-            // Points
             state.spots.forEach(s=>{
                 const cx=stX+s.x, cy=stY+s.y, act=state.itinerary[state.currentDayIndex].includes(s.id);
                 ctx.beginPath(); ctx.arc(cx,cy,(act?8:5)/Math.sqrt(state.mapScale),0,Math.PI*2); ctx.fillStyle=act?'#2563EB':'#94A3B8'; ctx.fill();
@@ -384,127 +588,140 @@
             });
             ctx.restore();
         }
-
-        // --- 2. Budget Logic (ID fix included) ---
-        function addCustomBudgetItem() {
-            const n=document.getElementById('custom-item-name').value, p=parseFloat(document.getElementById('custom-item-price').value);
-            if(n&&p){state.customBudget.push({name:n,price:p}); document.getElementById('custom-item-name').value=''; document.getElementById('custom-item-price').value=''; renderBudget();}
+        function handleMapClick(cx, cy, w){
+            const rect=w.getBoundingClientRect();
+            const vs=1000, stX=(w.offsetWidth-vs)/2, stY=(w.offsetHeight-vs)/2;
+            const mx=cx-rect.left, my=cy-rect.top;
+            const vx=(mx-w.offsetWidth/2-state.mapOffset.x)/state.mapScale+w.offsetWidth/2-stX;
+            const vy=(my-w.offsetHeight/2-state.mapOffset.y)/state.mapScale+w.offsetHeight/2-stY;
+            if(!state.tempSpotData)state.tempSpotData={}; state.tempSpotData.x=vx; state.tempSpotData.y=vy;
+            state.isPickingMode=false; window.openAttractionModal(false);
         }
-        function removeBudgetItem(i){state.customBudget.splice(i,1); renderBudget();}
-        
-        function renderBudget() {
-            const p=parseInt(document.getElementById('budget-people').value)||1, d=parseInt(document.getElementById('budget-days').value)||1;
-            const stay=parseFloat(document.getElementById('price-stay').value)||0, trans=parseFloat(document.getElementById('price-trans').value)||0;
-            const food=parseFloat(document.getElementById('price-food').value)||0, ticket=parseFloat(document.getElementById('price-ticket').value)||0;
-            
-            const tStay=(stay*Math.ceil(p/2))*(d-1), tTrans=trans*d, tMisc=(food*p*d)+(ticket*p);
-            let listHtml=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🏨 住宿</span><span class="font-mono font-bold">¥<span id="disp-stay">${tStay}</span></span></div>`;
-            listHtml+=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🚗 交通</span><span class="font-mono font-bold">¥<span id="disp-trans">${tTrans}</span></span></div>`;
-            listHtml+=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🥘 食/票</span><span class="font-mono font-bold">¥<span id="disp-misc">${tMisc}</span></span></div>`;
-            
-            let tCustom=0;
-            state.customBudget.forEach((i,x)=>{
-                tCustom+=i.price;
-                listHtml+=`<div class="flex justify-between items-center p-2 bg-orange-500/20 rounded-lg border border-orange-500/30 text-orange-100 budget-item-enter relative group"><span>${i.name}</span><div class="flex items-center gap-2"><span class="font-mono font-bold">¥${i.price}</span><button onclick="removeBudgetItem(${x})" class="text-white/70"><i class="ph ph-trash"></i></button></div></div>`;
+        function handleMapHover(e) {
+            const tip=document.getElementById('map-tooltip'); if(state.isPickingMode||state.isDragging){tip.classList.add('hidden');return;}
+            const w=document.getElementById('map-wrapper'), rect=w.getBoundingClientRect();
+            const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+            const cx=w.offsetWidth/2+state.mapOffset.x, cy=w.offsetHeight/2+state.mapOffset.y;
+            const stX=(w.offsetWidth-1000)/2, stY=(w.offsetHeight-1000)/2;
+            const h=state.spots.find(s=>{
+                const sx=cx+(stX+s.x-w.offsetWidth/2)*state.mapScale, sy=cy+(stY+s.y-w.offsetHeight/2)*state.mapScale;
+                return Math.abs(sx-mx)<10 && Math.abs(sy-my)<10;
             });
-            // Hack for Dashboard to read custom total easily
-            listHtml+=`<span id="disp-custom" style="display:none">${tCustom}</span>`;
-
-            document.getElementById('budget-summary-list').innerHTML=listHtml;
-            const total=tStay+tTrans+tMisc+tCustom;
-            document.getElementById('disp-total').innerText=total.toLocaleString();
-            document.getElementById('disp-avg').innerText=Math.round(total/p).toLocaleString();
+            if(h){ tip.style.left=(mx+15)+'px'; tip.style.top=my+'px'; tip.innerText=h.name; tip.classList.remove('hidden'); } else tip.classList.add('hidden');
         }
 
-        // --- 3. Dashboard Updates ---
-        function updateDashboard() {
-            renderBudget();
-            const t=document.getElementById('disp-total').innerText, d=state.itinerary.length;
-            const totGear=document.querySelectorAll('.gear-check').length, chkGear=document.querySelectorAll('.gear-check:checked').length;
-            
-            document.getElementById('dash-total').innerText=t;
-            document.getElementById('dash-days').innerText=d;
-            document.getElementById('dash-pack').innerText=totGear?Math.round(chkGear/totGear*100):0;
-            document.getElementById('dash-ski-spots').innerText=state.itinerary.flat().map(id=>state.spots.find(s=>s.id===id)).filter(s=>s&&s.type==='滑雪').length;
-            
-            updateCharts();
-        }
-
-        // --- 4. Charts ---
-        let budgetChart, polarChart, packChart;
-        function initCharts() {
-            budgetChart=new Chart(document.getElementById('budgetDoughnutChart'),{type:'doughnut',data:{labels:['住','行','食','自'],datasets:[{data:[1,1,1,1],backgroundColor:['#3B82F6','#10B981','#8B5CF6','#F97316'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:10}}}}});
-            polarChart=new Chart(document.getElementById('spotPolarChart'),{type:'polarArea',data:{labels:['自然','人文','滑雪','自定'],datasets:[{data:[1,1,1,0],backgroundColor:['#38BDF8aa','#A78BFAaa','#F97316aa','#FBBF24aa'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{ticks:{display:false}}},plugins:{legend:{position:'right',labels:{boxWidth:10}}}}});
-            packChart=new Chart(document.getElementById('packChart'),{type:'doughnut',data:{datasets:[{data:[0,1],backgroundColor:['#2563EB','#E5E7EB'],borderWidth:0,cutout:'85%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{tooltip:{enabled:false}}}});
-        }
-        function updateCharts() {
-            // Budget
-            const s=parseInt(document.getElementById('disp-stay').innerText), tr=parseInt(document.getElementById('disp-trans').innerText);
-            const m=parseInt(document.getElementById('disp-misc').innerText), c=parseInt(document.getElementById('disp-custom').innerText);
-            budgetChart.data.datasets[0].data=[s,tr,m,c]; budgetChart.update();
-            // Polar
-            const ids=state.itinerary.flat(), sp=ids.map(id=>state.spots.find(s=>s.id===id)).filter(s=>s);
-            polarChart.data.datasets[0].data=[sp.filter(s=>s.type==='自然').length,sp.filter(s=>s.type==='人文').length,sp.filter(s=>s.type==='滑雪').length,sp.filter(s=>s.type==='custom').length]; polarChart.update();
-        }
-
-        // --- 5. General Logic ---
-        function renderExploreGrid() {
-            const g=document.getElementById('explore-grid'), t=document.getElementById('explore-search').value.toLowerCase(), f=document.getElementById('explore-filter').value;
-            g.innerHTML='';
+        // --- 2. Explore & Route Logic ---
+        window.renderExploreGrid = () => {
+            const g=document.getElementById('explore-grid'), t=document.getElementById('explore-search').value.toLowerCase(), f=document.getElementById('explore-filter').value; g.innerHTML='';
             state.spots.forEach(s=>{
-                if((s.name.includes(t)||s.tags.join('').includes(t))&&(f==='all'||(f==='custom'?s.id>1000:s.type===f))){
+                if((s.name.toLowerCase().includes(t)||s.tags.join('').includes(t))&&(f==='all'||(f==='custom'?s.id>1000:s.type===f))){
                     const div=document.createElement('div'); div.className="bg-white rounded-xl shadow-sm p-3 border border-gray-100 flex flex-col justify-between";
                     div.innerHTML=`<div><div class="flex justify-between"><h3 class="font-bold text-gray-800">${s.name}</h3><span class="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">${s.type}</span></div><p class="text-xs text-gray-400 mt-1">${s.desc||''}</p></div><button onclick="addToRoute(${s.id})" class="mt-3 w-full bg-blue-50 text-blue-600 text-xs py-2 rounded font-medium">加入行程</button>`;
                     g.appendChild(div);
                 }
             });
         }
-        function addToRoute(id){ state.itinerary[state.currentDayIndex].push(id); renderDayList(); switchTab('routes'); }
+        function addToRoute(id){ state.itinerary[state.currentDayIndex].push(id); renderDayList(); debounceSave(); }
         
-        function renderDayList() {
-            const l=document.getElementById('day-list'); l.innerHTML=''; 
-            document.getElementById('budget-days').value=state.itinerary.length;
-            renderBudget(); // update days in budget
+        window.renderDayList = () => {
+            const l=document.getElementById('day-list'); l.innerHTML=''; document.getElementById('budget-days').value=state.itinerary.length; renderBudget();
             state.itinerary.forEach((s,i)=>{
-                const div=document.createElement('div'); 
-                div.className=`flex-shrink-0 lg:flex-shrink w-20 lg:w-full p-2 lg:p-3 rounded-xl border border-gray-100 cursor-pointer text-center lg:text-left transition-all ${i===state.currentDayIndex?'bg-blue-50 border-blue-200 text-blue-700':'hover:bg-gray-50 text-gray-500'}`;
+                const div=document.createElement('div'); div.className=`flex-shrink-0 lg:flex-shrink w-20 lg:w-full p-2 lg:p-3 rounded-xl border border-gray-100 cursor-pointer text-center lg:text-left transition-all ${i===state.currentDayIndex?'bg-blue-50 border-blue-200 text-blue-700':'hover:bg-gray-50 text-gray-500'}`;
                 div.innerHTML=`<div class="font-bold text-xs">D${i+1}</div><div class="text-[10px] opacity-70">${s.length}点</div>`;
-                div.onclick=()=>{state.currentDayIndex=i;renderDayList();};
-                l.appendChild(div);
+                div.onclick=()=>{state.currentDayIndex=i;renderDayList();}; l.appendChild(div);
             });
             document.getElementById('current-day-num').innerText=state.currentDayIndex+1;
             document.getElementById('day-spot-count').innerText=state.itinerary[state.currentDayIndex].length;
             renderDaySpots(); renderMap();
         }
-        function addDay(){ state.itinerary.push([]); state.currentDayIndex=state.itinerary.length-1; renderDayList(); }
+        function addDay(){ state.itinerary.push([]); state.currentDayIndex=state.itinerary.length-1; renderDayList(); debounceSave(); }
         
         function renderDaySpots() {
-            const desktopL=document.getElementById('day-spots-list-desktop');
-            const mobileL=document.getElementById('day-spots-list-mobile');
+            const desktopL=document.getElementById('day-spots-list-desktop'), mobileL=document.getElementById('day-spots-list-mobile');
             const html = state.itinerary[state.currentDayIndex].map((id,i)=>{
                 const s=state.spots.find(sp=>sp.id===id); if(!s)return'';
                 return `<div class="flex justify-between items-center p-2 bg-gray-50 rounded"><span class="truncate">${i+1}. ${s.name}</span><button onclick="rmSpot(${i})" class="text-red-400 px-2">×</button></div>`;
             }).join('');
             desktopL.innerHTML=html; mobileL.innerHTML=html;
         }
-        function rmSpot(i){state.itinerary[state.currentDayIndex].splice(i,1); renderDayList();}
+        function rmSpot(i){state.itinerary[state.currentDayIndex].splice(i,1); renderDayList(); debounceSave();}
         
-        function renderAllSpots(){
+        window.renderAllSpots = () => {
             const l=document.getElementById('all-spots-list'), t=document.getElementById('spot-search').value; l.innerHTML='';
             state.spots.filter(s=>s.name.includes(t)).forEach(s=>{
                 const b=document.createElement('button'); b.className="w-full text-left p-2 hover:bg-gray-50 text-xs text-gray-600 flex justify-between";
-                b.innerHTML=`<span>${s.name}</span><span>+</span>`; b.onclick=()=>{state.itinerary[state.currentDayIndex].push(s.id);renderDayList();};
-                l.appendChild(b);
+                b.innerHTML=`<span>${s.name}</span><span>+</span>`; b.onclick=()=>{state.itinerary[state.currentDayIndex].push(s.id);renderDayList();debounceSave();}; l.appendChild(b);
             });
         }
+        
+        // --- Custom Spot Logic ---
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('modal-img-preview').innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover rounded-lg">`;
+                    currentModalImageBase64 = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+        
+        window.openAttractionModal = (r) => {
+            document.getElementById('attraction-modal').classList.remove('hidden'); 
+            if(r){
+                document.getElementById('modal-name').value=''; state.tempSpotData=null; 
+                document.getElementById('modal-desc').value='';
+                document.getElementById('modal-coords-display').innerText='未设置';
+                currentModalImageBase64 = null;
+                document.getElementById('modal-img-input').value = ''; // Clear file input
+                document.getElementById('modal-img-preview').innerHTML = `<i class="ph ph-image text-2xl mb-1"></i><span class="text-xs">点击添加封面图片 (可选)</span>`;
 
-        // --- Gear ---
-        function renderGear() {
+            } else if(state.tempSpotData?.x) {
+                 document.getElementById('modal-coords-display').innerText=`X:${Math.round(state.tempSpotData.x)}, Y:${Math.round(state.tempSpotData.y)}`;
+            }
+        }
+        function pickLocationFromModal(){
+            state.tempSpotData={name:document.getElementById('modal-name').value}; state.isPickingMode=true; 
+            document.getElementById('attraction-modal').classList.add('hidden'); switchTab('routes'); 
+            alert("请点击地图进行定位");
+        }
+        function saveCustomSpot(){
+            const n=document.getElementById('modal-name').value; if(!n)return;
+            state.spots.push({
+                id:Date.now(), name:n, type:document.getElementById('modal-type').value, desc:document.getElementById('modal-desc').value, x:state.tempSpotData?.x||500, y:state.tempSpotData?.y||500, tags:[],
+                img: currentModalImageBase64
+            });
+            currentModalImageBase64 = null;
+            renderExploreGrid(); renderAllSpots(); renderMap(); document.getElementById('attraction-modal').classList.add('hidden'); debounceSave();
+        }
+        
+        // --- 3. Budget & Gear ---
+        window.renderBudget = () => {
+            const p=parseInt(document.getElementById('budget-people').value)||1, d=parseInt(document.getElementById('budget-days').value)||1;
+            const stay=parseFloat(document.getElementById('price-stay').value)||0, trans=parseFloat(document.getElementById('price-trans').value)||0;
+            const food=parseFloat(document.getElementById('price-food').value)||0, ticket=parseFloat(document.getElementById('price-ticket').value)||0;
+            const tStay=(stay*Math.ceil(p/2))*(d-1), tTrans=trans*d, tMisc=(food*p*d)+(ticket*p);
+            
+            let listHtml=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🏨 住宿</span><span class="font-mono font-bold">¥<span id="disp-stay">${tStay}</span></span></div>`;
+            listHtml+=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🚗 交通</span><span class="font-mono font-bold">¥<span id="disp-trans">${tTrans}</span></span></div>`;
+            listHtml+=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🥘 食/票</span><span class="font-mono font-bold">¥<span id="disp-misc">${tMisc}</span></span></div>`;
+            
+            let tCustom=0;
+            state.customBudget.forEach((i,x)=>{ tCustom+=i.price; listHtml+=`<div class="flex justify-between items-center p-2 bg-orange-500/20 rounded-lg border border-orange-500/30 text-orange-100 budget-item-enter relative group"><span>${i.name}</span><div class="flex items-center gap-2"><span class="font-mono font-bold">¥${i.price}</span><button onclick="removeBudgetItem(${x})" class="text-white/70"><i class="ph ph-trash"></i></button></div></div>`; });
+            listHtml+=`<span id="disp-custom" style="display:none">${tCustom}</span>`;
+
+            document.getElementById('budget-summary-list').innerHTML=listHtml;
+            const total=tStay+tTrans+tMisc+tCustom;
+            document.getElementById('disp-total').innerText=total.toLocaleString();
+            document.getElementById('disp-avg').innerText=Math.round(total/p).toLocaleString();
+            debounceSave();
+        }
+        function removeBudgetItem(i){state.customBudget.splice(i,1); renderBudget();}
+        
+        window.renderGear = () => {
             const c=document.getElementById('gear-container'); c.innerHTML='';
             let cats={...defaultGear}; if(state.customGear.length) cats["自定义"]=state.customGear;
-            for(const [k,v] of Object.entries(cats)){
-                c.innerHTML+=`<div><h4 class="font-bold text-gray-700 text-sm mb-2">${k}</h4><div class="grid grid-cols-2 gap-2">${v.map(i=>`<label class="flex items-center space-x-2 text-xs text-gray-500"><input type="checkbox" class="gear-check rounded text-blue-600" onchange="updateGearStats()"><span>${i}</span></label>`).join('')}</div></div>`;
-            }
+            for(const [k,v] of Object.entries(cats)){c.innerHTML+=`<div><h4 class="font-bold text-gray-700 text-sm mb-2 border-l-4 border-blue-500 pl-2">${k}</h4><div class="space-y-2">${v.map(i=>`<label class="flex items-center space-x-2 text-xs text-gray-500"><input type="checkbox" class="rounded text-blue-600 w-4 h-4 gear-check" data-item="${i}" onchange="updateGearStats();debounceSave();"><span>${i}</span></label>`).join('')}</div></div>`;}
             updateGearStats();
         }
         function updateGearStats(){
@@ -513,43 +730,39 @@
             document.getElementById('pack-percent-text').innerText=(t?Math.round(c/t*100):0)+'%';
             if(packChart){packChart.data.datasets[0].data=[c,t-c]; packChart.update();}
         }
-        function addCustomGear(){const n=prompt("名称"); if(n){state.customGear.push(n); renderGear();}}
-        function exportGearList(){
-            let txt="我的清单\n"; document.querySelectorAll('.gear-check').forEach(cb=>{if(cb.checked)txt+=`- [x] ${cb.nextElementSibling.innerText}\n`});
-            const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain'})); a.download='list.txt'; a.click();
+        function addCustomGear(){const n=prompt("名称"); if(n){state.customGear.push(n); renderGear();debounceSave();}}
+
+        // --- 4. Utility ---
+        window.updateCharts = () => {
+            const s=parseInt(document.getElementById('disp-stay').innerText.replace(/,/g,'')), tr=parseInt(document.getElementById('disp-trans').innerText.replace(/,/g,'')), m=parseInt(document.getElementById('disp-misc').innerText.replace(/,/g,'')), c=parseInt(document.getElementById('disp-custom').innerText.replace(/,/g,''));
+            budgetChart.data.datasets[0].data=[s,tr,m,c]; budgetChart.update();
+            const ids=state.itinerary.flat(), sp=ids.map(id=>state.spots.find(s=>s.id===id)).filter(s=>s);
+            polarChart.data.datasets[0].data=[sp.filter(s=>s.type==='自然').length,sp.filter(s=>s.type==='人文').length,sp.filter(s=>s.type==='滑雪').length,sp.filter(s=>s.type==='custom').length]; polarChart.update();
         }
 
-        // --- Utility ---
+        window.updateDashboard = () => {
+            renderBudget();
+            const t=document.getElementById('disp-total').innerText;
+            document.getElementById('dash-total').innerText=t;
+            document.getElementById('dash-days').innerText=state.itinerary.length;
+            document.getElementById('dash-pack').innerText=document.getElementById('pack-percent-text').innerText.replace('%','');
+            document.getElementById('dash-ski-spots').innerText=state.itinerary.flat().map(id=>state.spots.find(s=>s.id===id)).filter(s=>s&&s.type==='滑雪').length;
+            window.updateCharts();
+        }
+        window.initCharts = () => {
+            budgetChart=new Chart(document.getElementById('budgetDoughnutChart'),{type:'doughnut',data:{labels:['住','行','食','自'],datasets:[{data:[1,1,1,1],backgroundColor:['#3B82F6','#10B981','#8B5CF6','#F97316'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:10}}}}});
+            polarChart=new Chart(document.getElementById('spotPolarChart'),{type:'polarArea',data:{labels:['自然','人文','滑雪','自定'],datasets:[{data:[1,1,1,0],backgroundColor:['#38BDF8aa','#A78BFAaa','#F97316aa','#FBBF24aa'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{ticks:{display:false}}},plugins:{legend:{position:'right',labels:{boxWidth:10}}}}});
+            packChart=new Chart(document.getElementById('packChart'),{type:'doughnut',data:{datasets:[{data:[0,1],backgroundColor:['#2563EB','#E5E7EB'],borderWidth:0,cutout:'85%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{tooltip:{enabled:false}}}});
+        }
         function switchTab(id) {
             document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));
             document.getElementById(id).classList.add('active');
             document.querySelectorAll('.mobile-nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
-            document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('bg-gray-100', b.dataset.tab!==id));
+            document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('bg-white', b.dataset.tab===id));
             
             if(id==='routes') setTimeout(renderMap,100);
             if(id==='data') updateDashboard();
             window.scrollTo(0,0);
-        }
-        
-        // Modals
-        function openAttractionModal(r){document.getElementById('attraction-modal').classList.remove('hidden'); if(r){document.getElementById('modal-name').value=''; state.tempSpotData=null; document.getElementById('modal-coords-display').innerText='未设置';}}
-        function closeModal(){document.getElementById('attraction-modal').classList.add('hidden'); state.isPickingMode=false;}
-        function pickLocationFromModal(){state.tempSpotData={name:document.getElementById('modal-name').value}; state.isPickingMode=true; closeModal(); switchTab('routes'); alert("请点击地图");}
-        function handleMapClick(cx, cy, w){
-            const rect=w.getBoundingClientRect();
-            // Calc virtual coords
-            const vs=1000, stX=(w.offsetWidth-vs)/2, stY=(w.offsetHeight-vs)/2;
-            const mx=cx-rect.left, my=cy-rect.top;
-            const vx=(mx-w.offsetWidth/2-state.mapOffset.x)/state.mapScale+w.offsetWidth/2-stX;
-            const vy=(my-w.offsetHeight/2-state.mapOffset.y)/state.mapScale+w.offsetHeight/2-stY;
-            
-            if(!state.tempSpotData)state.tempSpotData={}; state.tempSpotData.x=vx; state.tempSpotData.y=vy;
-            state.isPickingMode=false; openAttractionModal(false);
-        }
-        function saveCustomSpot(){
-            const n=document.getElementById('modal-name').value; if(!n)return;
-            state.spots.push({id:Date.now(), name:n, type:document.getElementById('modal-type').value, desc:document.getElementById('modal-desc').value, x:state.tempSpotData?.x||500, y:state.tempSpotData?.y||500, tags:[]});
-            renderExploreGrid(); renderAllSpots(); renderMap(); closeModal();
         }
     </script>
 </body>
