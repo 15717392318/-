@@ -7,6 +7,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- 1. 密钥替换：请务必替换为您真实的高德 Key -->
+    <!-- FIX: 增加 &callback=initAmapsCallback 参数，在高德加载完成后调用全局函数 -->
+    <script type="text/javascript" 
+        src="https://webapi.amap.com/maps?v=2.0&key=你的真实高德Key&callback=initAmapsCallback"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
         
@@ -19,12 +25,11 @@
         
         #map-wrapper {
             background-color: #e5e7eb;
-            background-image: linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px);
-            background-size: 40px 40px;
-            cursor: grab; overflow: hidden; position: relative;
+            /* 移除 Canvas 相关的背景图案，但保留样式作为容器 */
+            cursor: default; overflow: hidden; position: relative;
             touch-action: none;
         }
-        #map-wrapper:active { cursor: grabbing; }
+        #map-wrapper:active { cursor: default; }
 
         /* 移动端底部导航激活态 */
         .mobile-nav-btn.active { color: #2563EB; }
@@ -33,6 +38,11 @@
         .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #CBD5E1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background-color: transparent; }
+
+        /* Input error ring */
+        .ring-red-500 {
+            transition: all 0.2s ease-in-out;
+        }
     </style>
 </head>
 <body class="flex flex-col min-h-screen">
@@ -116,18 +126,18 @@
                             第 <span id="current-day-num">1</span> 天
                           </div>
                     </div>
+                    <!-- 移除 Canvas 相关工具栏，因为 AMap 自带 -->
                     <div class="absolute bottom-3 right-3 z-10 flex gap-2">
-                        <button onclick="resetMapView()" class="bg-white p-2 rounded shadow text-gray-600 text-xs"><i class="ph ph-arrows-out-cardinal"></i></button>
-                        <div class="flex bg-white rounded shadow overflow-hidden">
-                            <button onclick="zoomMap(0.2)" class="p-2 border-r text-gray-600"><i class="ph ph-plus"></i></button>
-                            <button onclick="zoomMap(-0.2)" class="p-2 text-gray-600"><i class="ph ph-minus"></i></button>
-                        </div>
+                         <!-- FIX: Ensure map object exists before calling methods -->
+                         <button onclick="if(window.map) window.map.setZoom(window.map.getZoom() + 1)" class="bg-white p-2 border-r text-gray-600 rounded-l shadow hover:bg-gray-100 transition"><i class="ph ph-plus"></i></button>
+                         <button onclick="if(window.map) window.map.setZoom(window.map.getZoom() - 1)" class="bg-white p-2 text-gray-600 rounded-r shadow hover:bg-gray-100 transition"><i class="ph ph-minus"></i></button>
                     </div>
+
+                    <!-- 2. HTML 结构改造: 替换 Canvas 为 AMap 容器 -->
                     <div class="relative w-full h-[350px] lg:h-full" id="map-wrapper">
-                        <canvas id="route-canvas" class="block"></canvas>
-                        <div id="map-tooltip" class="absolute hidden bg-gray-900/90 text-white text-xs px-2 py-1 rounded pointer-events-none z-20 whitespace-nowrap"></div>
+                         <div id="amap-container" style="width: 100%; height: 100%;"></div>
                     </div>
-                    <div class="p-2 bg-gray-50 text-[10px] text-gray-400 text-center">👆 拖拽 • 滚轮/双指缩放</div>
+                    <div class="p-2 bg-gray-50 text-[10px] text-gray-400 text-center">👆 高德地图: 点击标记点可启动导航</div>
                 </div>
                 <div class="lg:col-span-3 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full order-3">
                     <div class="lg:hidden mb-4">
@@ -429,7 +439,9 @@
                     window.state.spots = [...window.defaultSpots, ...(data.spots || [])]; 
                     // Parse itinerary string back to array
                     try {
-                        window.state.itinerary = JSON.parse(data.itinerary);
+                        // Ensure itinerary has correct shape, even if saved as []
+                        const loadedItinerary = JSON.parse(data.itinerary);
+                        window.state.itinerary = loadedItinerary.length > 0 ? loadedItinerary : [[]];
                     } catch {
                         window.state.itinerary = [[]]; // Fallback if parsing fails
                     }
@@ -472,7 +484,7 @@
 
         async function saveUserData() {
             if (!currentUserId || !isAuthReady || !db) {
-                // If not logged in, data is saved locally by debounceSave only (which is fine)
+                console.warn("Save skipped: User not authenticated or DB not ready.");
                 return;
             }
 
@@ -587,13 +599,14 @@
     </script>
     <script>
         // --- 核心数据 (Global State) ---
+        // 3. 数据结构改造: 移除 x/y, 增加 lng/lat 真实坐标
         const defaultSpots = [
-            { id: 1, name: "乌鲁木齐", type: "人文", desc: "首府", x: 500, y: 300, tags: ["中转"], img: null },
-            { id: 2, name: "禾木村", type: "自然", desc: "晨雾", x: 450, y: 100, tags: ["摄影"], img: null },
-            { id: 3, name: "喀纳斯", type: "自然", desc: "湖怪", x: 400, y: 80, tags: ["徒步"], img: null },
-            { id: 4, name: "赛里木湖", type: "自然", desc: "蓝冰", x: 200, y: 350, tags: ["自驾"], img: null },
-            { id: 5, name: "喀什古城", type: "人文", desc: "古城", x: 100, y: 800, tags: ["美食"], img: null },
-            { id: 6, name: "可可托海", type: "滑雪", desc: "滑雪", x: 600, y: 150, tags: ["极限"], img: null },
+            { id: 1, name: "乌鲁木齐", type: "人文", desc: "首府", lng: 87.617733, lat: 43.792818, tags: ["中转"], img: null },
+            { id: 2, name: "禾木村", type: "自然", desc: "晨雾", lng: 87.14083, lat: 48.06451, tags: ["摄影"], img: null },
+            { id: 3, name: "喀纳斯", type: "自然", desc: "湖怪", lng: 87.0425, lat: 48.6575, tags: ["徒步"], img: null },
+            { id: 4, name: "赛里木湖", type: "自然", desc: "蓝冰", lng: 81.25888, lat: 44.59306, tags: ["自驾"], img: null },
+            { id: 5, name: "喀什古城", type: "人文", desc: "古城", lng: 76.0664, lat: 39.4678, tags: ["美食"], img: null },
+            { id: 6, name: "可可托海", type: "滑雪", desc: "滑雪", lng: 89.96766, lat: 47.1648, tags: ["极限"], img: null },
         ];
         window.defaultSpots = defaultSpots;
 
@@ -605,7 +618,9 @@
         window.state = {
             spots: [...defaultSpots], itinerary: [[]], currentDayIndex: 0,
             customBudget: [], customGear: [], weatherTemp: -20,
-            isPickingMode: false, mapScale: 1, mapOffset: {x:0,y:0}, isDragging: false, startDrag: {x:0,y:0}, tempSpotData: null,
+            isPickingMode: false, 
+            tempSpotCoords: null, // New variable for pick location mode
+            // Removed obsolete map state: mapScale, mapOffset, isDragging, startDrag, tempSpotData
             initialized: false, // Initialized Firebase/Auth
             dataLoaded: false // Data successfully loaded from Firestore or defaulted
         };
@@ -622,123 +637,97 @@
         let budgetChart, polarChart, packChart;
         let currentModalImageBase64 = null; 
         
+        // --- AMap Variables ---
+        let map = null;
+        let markers = [];
+        const XINJIANG_CENTER = [87.617733, 43.792818]; // 乌鲁木齐
+        
         // --- Modal Control ---
         window.closeModal = (id) => {
             document.getElementById(id).classList.add('hidden');
         }
-
-        // --- 1. Map Engine ---
-        function initMapEvents() {
-            const w = document.getElementById('map-wrapper');
-            w.addEventListener('wheel', e => { e.preventDefault(); zoomMap(e.deltaY>0?0.9:1.1); });
-            w.addEventListener('mousedown', e => { 
-                state.isDragging=true; 
-                state.startDrag={x:e.clientX,y:e.clientY}; 
-                w.style.cursor='grabbing'; 
-                if(state.isPickingMode) handleMapClick(e.clientX, e.clientY, w); 
-            });
-            window.addEventListener('mousemove', e => { if(state.isDragging) handleDrag(e.clientX, e.clientY); handleMapHover(e); });
-            window.addEventListener('mouseup', () => { state.isDragging=false; w.style.cursor=state.isPickingMode?'crosshair':'grab'; });
-            w.addEventListener('touchstart', e => { if(e.touches.length === 1) { state.isDragging=true; state.startDrag={x:e.touches[0].clientX, y:e.touches[0].clientY}; } }, {passive: false});
-            w.addEventListener('touchmove', e => { if(state.isDragging && e.touches.length === 1) { e.preventDefault(); handleDrag(e.touches[0].clientX, e.touches[0].clientY); } }, {passive: false});
-            w.addEventListener('touchend', () => { state.isDragging=false; });
-        }
-        function handleDrag(cx, cy) {
-            const dx = cx - state.startDrag.x, dy = cy - state.startDrag.y;
-            state.mapOffset.x += dx; state.mapOffset.y += dy;
-            state.startDrag = {x:cx, y:cy};
-            renderMap();
-        }
-        function zoomMap(factor) { 
-            const ns = state.mapScale * factor; 
-            if(ns > 0.2 && ns < 5) { 
-                state.mapScale = ns; 
-                renderMap(); 
-            } 
-        }
-        function resetMapView() { state.mapScale=1; state.mapOffset={x:0,y:0}; renderMap(); }
         
-        function renderMap() {
-            const cvs=document.getElementById('route-canvas'), ctx=cvs.getContext('2d'), w=document.getElementById('map-wrapper');
-            cvs.width=w.offsetWidth; cvs.height=w.offsetHeight; ctx.clearRect(0,0,cvs.width,cvs.height);
-            // Translate/Scale/Zoom setup
-            ctx.save(); 
-            ctx.translate(cvs.width/2 + state.mapOffset.x, cvs.height/2 + state.mapOffset.y); 
-            ctx.scale(state.mapScale, state.mapScale); 
-            ctx.translate(-cvs.width/2, -cvs.height/2);
+        // FIX: Global function to be called by AMap SDK after load
+        window.initAmapsCallback = () => {
+             console.log("AMap SDK loaded successfully.");
+             // AMap library is now guaranteed to be available
+             // If we are on the 'routes' tab initially, we call initAmaps
+             if (document.getElementById('routes').classList.contains('active')) {
+                 window.initAmaps();
+             }
+        }
+
+
+        // --- 1. Map Engine (Replaced with AMap logic) ---
+        
+        // 4A. 地图初始化和渲染函数
+        window.initAmaps = () => {
+            // FIX: Check if map is already initialized
+            if (map) {
+                // If map exists, just re-render markers
+                window.renderAmapsSpots();
+                return;
+            }
             
-            const vs=1000, stX=(cvs.width-vs)/2, stY=(cvs.height-vs)/2;
-            
-            // Draw routes
-            state.itinerary.forEach((dS,di)=>{
-                if(dS.length<2)return; 
-                ctx.beginPath(); 
-                ctx.strokeStyle = di === state.currentDayIndex ? '#2563EB' : '#CBD5E1'; 
-                ctx.lineWidth = di === state.currentDayIndex ? 4 / state.mapScale : 2 / state.mapScale; 
-                ctx.setLineDash(di === state.currentDayIndex ? [] : [5/state.mapScale, 5/state.mapScale]);
-                dS.forEach((id,idx)=>{const s=state.spots.find(sp=>sp.id===id); if(s) idx===0?ctx.moveTo(stX+s.x,stY+s.y):ctx.lineTo(stX+s.x,stY+s.y);}); 
-                ctx.stroke();
+            // FIX: AMap is guaranteed to be available here due to the callback logic
+
+            map = new AMap.Map('amap-container', {
+                zoom: 7, 
+                center: XINJIANG_CENTER, 
+                viewMode: '3D' 
             });
             
-            // Draw spots
-            state.spots.forEach(s=>{
-                const cx=stX+s.x, cy=stY+s.y, act=state.itinerary[state.currentDayIndex].includes(s.id);
-                ctx.beginPath(); 
-                ctx.arc(cx, cy, (act ? 8 : 5) / Math.sqrt(state.mapScale), 0, Math.PI*2); 
-                ctx.fillStyle = act ? '#2563EB' : '#94A3B8'; 
-                ctx.fill();
-                if(act || state.mapScale > 1.5) { 
-                    ctx.fillStyle='#334155'; 
-                    ctx.font=`${12/state.mapScale}px sans-serif`; 
-                    ctx.fillText(s.name, cx + 10 / state.mapScale, cy + 4 / state.mapScale); 
+            // Add click listener for map picking mode
+            map.on('click', (e) => {
+                if (state.isPickingMode) {
+                    state.tempSpotCoords = { lng: e.lnglat.getLng(), lat: e.lnglat.getLat() };
+                    state.isPickingMode = false;
+                    
+                    // Reopen the modal with coordinates updated
+                    window.openAttractionModal(false); 
+                    
+                    // Clean up UI cursor
+                    document.getElementById('map-wrapper').style.cursor = 'default';
                 }
             });
-            ctx.restore();
-        }
+
+            // Initial render after map is complete
+            map.on('complete', window.renderAmapsSpots);
+        };
         
-        function handleMapClick(cx, cy, w){
-            const rect=w.getBoundingClientRect();
-            const vs=1000, stX=(w.offsetWidth-vs)/2, stY=(w.offsetHeight-vs)/2;
-            const mx=cx-rect.left, my=cy-rect.top;
-            const vx=(mx-w.offsetWidth/2-state.mapOffset.x)/state.mapScale+w.offsetWidth/2-stX;
-            const vy=(my-w.offsetHeight/2-state.mapOffset.y)/state.mapScale+w.offsetHeight/2-stY;
+        window.renderAmapsSpots = () => {
+            if (!map) return;
+            map.remove(markers); 
+            markers = [];
+
+            // Get all unique spot IDs from the itinerary
+            const activeSpotIds = new Set(window.state.itinerary.flat());
             
-            if(!state.tempSpotData) state.tempSpotData={}; 
-            state.tempSpotData.x=vx; 
-            state.tempSpotData.y=vy;
-            
-            state.isPickingMode=false; 
-            document.getElementById('map-wrapper').style.cursor = 'grab';
-            window.openAttractionModal(false); // Open modal to finish adding spot
-        }
-        
-        function handleMapHover(e) {
-            const tip=document.getElementById('map-tooltip'); 
-            if(state.isPickingMode || state.isDragging){ tip.classList.add('hidden'); return; }
-            
-            const w=document.getElementById('map-wrapper'), rect=w.getBoundingClientRect();
-            const mx=e.clientX-rect.left, my=e.clientY-rect.top;
-            const cx=w.offsetWidth/2+state.mapOffset.x, cy=w.offsetHeight/2+state.mapOffset.y;
-            const stX=(w.offsetWidth-1000)/2, stY=(w.offsetHeight-1000)/2;
-            
-            const h=state.spots.find(s=>{
-                // Calculate scaled/translated spot coordinates on screen
-                const sx=cx+(stX+s.x-w.offsetWidth/2)*state.mapScale, 
-                      sy=cy+(stY+s.y-w.offsetHeight/2)*state.mapScale;
-                // Check if mouse is near the spot (adjusting for scale)
-                const hitRadius = 10 / Math.sqrt(state.mapScale);
-                return Math.abs(sx - mx) < hitRadius && Math.abs(sy - my) < hitRadius;
+            window.state.spots.forEach(spot => {
+                if (!spot.lng || !spot.lat) return; 
+
+                const isPlanned = activeSpotIds.has(spot.id);
+
+                const marker = new AMap.Marker({
+                    position: new AMap.LngLat(spot.lng, spot.lat),
+                    title: spot.name,
+                    content: `<div class="p-1 rounded-full text-white font-bold text-xs shadow-md border ${isPlanned ? 'bg-blue-600 border-blue-800' : 'bg-gray-400 border-gray-600'}">
+                                ${isPlanned ? '✅' : '📍'}
+                            </div>`,
+                    offset: new AMap.Pixel(-10, -10)
+                });
+
+                // 核心功能：点击标记点跳转高德导航
+                marker.on('click', function() {
+                    const url = `https://uri.amap.com/marker?position=${spot.lng},${spot.lat}&name=${spot.name}&src=XinjiangPlanner&coordinate=gaode&callnative=1`;
+                    window.open(url, '_blank');
+                });
+                
+                map.add(marker);
+                markers.push(marker);
             });
-            
-            if(h){ 
-                tip.style.left=(mx+15)+'px'; 
-                tip.style.top=my+'px'; 
-                tip.innerText=h.name; 
-                tip.classList.remove('hidden'); 
-            } else {
-                tip.classList.add('hidden');
-            }
-        }
+        };
+        // End AMap logic
 
         // --- 2. Explore & Route Logic ---
         window.renderExploreGrid = () => {
@@ -797,7 +786,8 @@
             document.getElementById('current-day-num').innerText=state.currentDayIndex+1;
             document.getElementById('day-spot-count').innerText=state.itinerary[state.currentDayIndex].length;
             renderDaySpots(); 
-            renderMap();
+            // Call AMap spot rendering
+            window.renderAmapsSpots(); 
         }
         
         function addDay(){ 
@@ -851,48 +841,69 @@
         
         window.openAttractionModal = (reset = true) => {
             document.getElementById('attraction-modal').classList.remove('hidden'); 
-            if(reset){
-                document.getElementById('modal-name').value=''; state.tempSpotData=null; 
+            
+            // Check if we are coming from map picking mode
+            if(!reset && window.state.tempSpotCoords) {
+                 document.getElementById('modal-coords-display').innerText = 
+                    `坐标: Lng:${Math.round(window.state.tempSpotCoords.lng * 1000) / 1000}, Lat:${Math.round(window.state.tempSpotCoords.lat * 1000) / 1000}`;
+            } else if(reset){
+                // Reset form state
+                document.getElementById('modal-name').value=''; 
+                document.getElementById('modal-name').classList.remove('ring-red-500', 'ring-2'); // Clear feedback
+                window.state.tempSpotCoords = null; // Clear picked coordinates
                 document.getElementById('modal-desc').value='';
                 document.getElementById('modal-coords-display').innerText='坐标: 未设置';
                 currentModalImageBase64 = null;
                 document.getElementById('modal-img-input').value = '';
                 document.getElementById('modal-img-preview').innerHTML = `<i class="ph ph-image text-2xl mb-1"></i><span class="text-xs">点击添加封面图片 (可选)</span>`;
 
-            } else if(state.tempSpotData?.x) {
-                document.getElementById('modal-coords-display').innerText=`坐标: X:${Math.round(state.tempSpotData.x)}, Y:${Math.round(state.tempSpotData.y)}`;
             }
         }
         
         function pickLocationFromModal(){
-            state.tempSpotData={name:document.getElementById('modal-name').value}; 
-            state.isPickingMode=true; 
-            document.getElementById('attraction-modal').classList.add('hidden'); 
+            window.state.isPickingMode=true; 
+            document.getElementById('attraction-modal').classList.add('hidden'); 
             switchTab('routes'); 
+            // AMap is already initialized and click listener is active
             document.getElementById('map-wrapper').style.cursor = 'crosshair';
-            console.log("地点选取模式已开启，请点击地图上的位置。"); // Replaced alert
+            console.log("地点选取模式已开启，请点击地图上的位置。");
         }
         
         async function saveCustomSpot(){
             const nameInput = document.getElementById('modal-name');
             const n=nameInput.value;
+            const saveBtn = document.getElementById('save-spot-btn');
             
-            // --- FIX: Replace blocking alert with visual feedback and console error ---
-            if(!n) {
+            // Coordinate requirement check (Must have lng/lat from map picking)
+            if (!window.state.tempSpotCoords) {
+                 console.error("保存失败: 请先在地图上选择位置。"); 
+                 saveBtn.innerText = '请先选位置！';
+                 saveBtn.classList.remove('bg-blue-600');
+                 saveBtn.classList.add('bg-red-600');
+                 setTimeout(() => {
+                    saveBtn.innerText = '保 存';
+                    saveBtn.classList.remove('bg-red-600');
+                    saveBtn.classList.add('bg-blue-600');
+                 }, 2000);
+                 return;
+            }
+
+            // --- FIX 1: Visual feedback for missing name ---
+            if(!n || n.trim() === '') {
                 nameInput.classList.add('ring-red-500', 'ring-2'); // Visual feedback
                 setTimeout(() => nameInput.classList.remove('ring-red-500', 'ring-2'), 1000);
                 console.error("保存失败: 请输入地点名称。"); // Console error
                 return;
             }
+            nameInput.classList.remove('ring-red-500', 'ring-2'); // Clear feedback
 
             let imageUrl = null;
             if (currentModalImageBase64 && window.uploadImageAndGetUrl) {
                 if (!window.currentUserId) {
-                    alert("请先登录账户 (或注册) 才能上传图片并保存自定义景点。");
+                    console.error("图片上传失败: 请先登录账户 (或注册) 才能上传图片。");
                     return; 
                 }
 
-                const saveBtn = document.getElementById('save-spot-btn');
                 saveBtn.innerHTML = '<i class="ph ph-spinner-gap animate-spin"></i> 上传中...';
                 saveBtn.disabled = true;
 
@@ -902,30 +913,43 @@
                 saveBtn.innerHTML = '保 存';
                 saveBtn.disabled = false;
 
-                // --- FIX: Replace blocking alert with console error ---
+                // --- FIX 2: Check for upload failure and return before creating spot ---
                 if (!imageUrl) {
                     console.error("图片上传失败，请检查 Firebase Storage 配置和安全规则。");
                     return;
                 }
             }
-
-            state.spots.push({
-                id:Date.now(), 
+            
+            // --- Spot Creation ---
+            const newSpot = {
+                id:Date.now(), // Unique ID > 1000 for custom spots
                 name:n, 
                 type:document.getElementById('modal-type').value, 
                 desc:document.getElementById('modal-desc').value, 
-                x:state.tempSpotData?.x||500, 
-                y:state.tempSpotData?.y||500, 
+                lng: state.tempSpotCoords.lng, // Use new lng/lat
+                lat: state.tempSpotCoords.lat, // Use new lng/lat
                 tags:[],
                 img: imageUrl
-            });
-            
+            };
+
+            state.spots.push(newSpot);
+            window.state.tempSpotCoords = null; // Clear temp coords
             currentModalImageBase64 = null;
-            renderExploreGrid(); 
-            renderAllSpots(); 
-            renderMap(); 
-            document.getElementById('attraction-modal').classList.add('hidden'); 
+            closeModal('attraction-modal');
+            
+            // --- FIX 3: Add successful local visual feedback ---
+            saveBtn.innerText = '保存成功！';
+            saveBtn.classList.remove('bg-blue-600');
+            saveBtn.classList.add('bg-green-600');
+            setTimeout(() => {
+                saveBtn.innerText = '保 存';
+                saveBtn.classList.remove('bg-green-600');
+                saveBtn.classList.add('bg-blue-600');
+            }, 1500);
+
+            // --- Triggers renderApp via debounceSave -> saveUserData -> onSnapshot ---
             debounceSave();
+            
         }
         
         // --- 3. Budget & Gear ---
@@ -1116,7 +1140,16 @@
             document.querySelectorAll('.mobile-nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
             document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('bg-white', b.dataset.tab===id));
             
-            if(id==='routes') setTimeout(renderMap,100);
+            // 4B. 更新标签页切换函数
+            if(id==='routes') {
+                // FIX: If map is not initialized yet (i.e., AMap SDK hasn't loaded), initAmapsCallback will handle it.
+                // If AMap is loaded, we call initAmaps directly.
+                if (typeof AMap !== 'undefined' && map === null) {
+                    window.initAmaps();
+                } else if (map !== null) {
+                    window.renderAmapsSpots(); // Only re-render markers if map is active
+                }
+            }
             if(id==='data') updateDashboard();
             if(id==='pack') renderGear(); // Force render pack list on tab switch
             
@@ -1126,7 +1159,6 @@
         // --- Initial Callbacks ---
         window.onload = () => {
             window.initCharts();
-            initMapEvents();
             // Initial rendering is now handled by the Firebase onAuthStateChanged and onSnapshot listeners
         }
     </script>
