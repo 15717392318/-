@@ -298,6 +298,41 @@
 
     <!-- Firebase Scripts -->
     <script type="module">
+        // =========================================================================
+        // 🚨🚨🚨 一劳永逸的解决方案：请将以下规则复制并发布到您的 Firebase Console 🚨🚨🚨
+        // =========================================================================
+
+        /* ** [ Firestore Database Rules ] **
+         ** 解决数据回档问题 (Permission Denied) **
+        */
+        /* rules_version = '2';
+        service cloud.firestore {
+          match /databases/{database}/documents {
+            // 允许任何已登录的用户读取和写入这个数据库中的所有数据
+            match /{document=**} {
+              allow read, write: if request.auth != null;
+            }
+          }
+        }
+        */
+
+        /* ** [ Firebase Storage Rules ] **
+         ** 解决图片上传失败问题 **
+        */
+        /*
+        rules_version = '2';
+        service firebase.storage {
+          match /b/{bucket}/o {
+            match /{allPaths=**} {
+              // 允许任何已认证的用户读取和写入
+              allow read, write: if request.auth != null;
+            }
+          }
+        }
+        */
+
+        // =========================================================================
+
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, query, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
