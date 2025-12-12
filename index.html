@@ -2,31 +2,44 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新疆旅行规划师 Pro | 终极定制版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>新疆旅行规划 | Pro版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
         
-        body { font-family: 'Noto Sans SC', sans-serif; background-color: #F8FAFC; color: #334155; }
-        .tab-content { display: none; animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        body { font-family: 'Noto Sans SC', sans-serif; background-color: #F8FAFC; color: #334155; padding-bottom: 80px; /* 为底部导航留白 */ }
+        
+        /* 交互动效 */
+        .tab-content { display: none; animation: fadeIn 0.3s ease-out; }
         .tab-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .hover-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .hover-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -8px rgba(0,0,0,0.15); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .hover-card { transition: all 0.3s; }
+        .hover-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -10px rgba(0,0,0,0.1); }
+
+        /* 地图画布容器 */
         #map-wrapper {
             background-color: #e5e7eb;
             background-image: linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px);
-            background-size: 50px 50px;
+            background-size: 40px 40px;
             cursor: grab; overflow: hidden; position: relative;
+            touch-action: none; /* 禁止浏览器默认触摸行为(如滚动)以便地图拖拽 */
         }
         #map-wrapper:active { cursor: grabbing; }
+
         .day-card.active { border-left-color: #3B82F6; background-color: #EFF6FF; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        
+        /* 滚动条 */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        /* 移动端底部导航激活态 */
+        .mobile-nav-btn.active { color: #2563EB; }
+        .mobile-nav-btn.active i { font-weight: bold; }
         
         /* 预算列表项进入动画 */
         @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
@@ -35,147 +48,163 @@
 </head>
 <body class="flex flex-col min-h-screen">
 
-    <!-- 顶部导航 -->
-    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200">
+    <!-- 顶部标题栏 (Mobile & Desktop) -->
+    <header class="bg-white/90 backdrop-blur-md sticky top-0 z-40 border-b border-gray-200 shadow-sm">
         <div class="container mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="bg-blue-600 text-white p-2 rounded-xl shadow-lg shadow-blue-500/30">
-                    <i class="ph ph-notebook text-xl"></i>
+            <div class="flex items-center gap-2">
+                <div class="bg-blue-600 text-white p-1.5 rounded-lg shadow-md shadow-blue-500/30">
+                    <i class="ph ph-airplane-tilt text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="font-bold text-gray-800 text-lg leading-tight">新疆旅行规划师 <span class="text-xs text-white bg-blue-500 px-2 py-0.5 rounded-full ml-1">V3.3</span></h1>
+                    <h1 class="font-bold text-gray-800 text-base leading-tight">新疆规划师 <span class="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-100 align-middle">V3.4</span></h1>
                 </div>
             </div>
-            <nav class="hidden md:flex bg-gray-100/50 p-1.5 rounded-xl border border-gray-100">
-                <button onclick="switchTab('explore')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="explore">🏔️ 景点百科</button>
-                <button onclick="switchTab('routes')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="routes">🗺️ 交互地图</button>
-                <button onclick="switchTab('budget')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="budget">💰 智能预算</button>
-                <button onclick="switchTab('data')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="data">📊 全景看板</button>
-                <button onclick="switchTab('pack')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="pack">🎒 装备清单</button>
+            
+            <!-- Desktop Nav (Hidden on Mobile) -->
+            <nav class="hidden md:flex bg-gray-100/50 p-1 rounded-xl border border-gray-100">
+                <button onclick="switchTab('explore')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="explore">🏔️ 百科</button>
+                <button onclick="switchTab('routes')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="routes">🗺️ 地图</button>
+                <button onclick="switchTab('budget')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="budget">💰 预算</button>
+                <button onclick="switchTab('data')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="data">📊 看板</button>
+                <button onclick="switchTab('pack')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="pack">🎒 清单</button>
             </nav>
         </div>
     </header>
 
-    <main class="flex-grow container mx-auto px-4 py-6">
+    <main class="flex-grow container mx-auto px-4 py-4">
 
         <!-- 1. 景点百科 -->
         <section id="explore" class="tab-content">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-gray-800">景点百科</h2>
-                <button onclick="openAttractionModal(true)" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl shadow-lg shadow-blue-500/30 flex items-center gap-2 transition-all hover:-translate-y-0.5">
-                    <i class="ph ph-map-pin-plus"></i> 添加新景点
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-800">景点发现</h2>
+                <button onclick="openAttractionModal(true)" class="bg-blue-600 active:bg-blue-700 text-white px-3 py-2 rounded-xl shadow-lg shadow-blue-500/30 flex items-center gap-1 text-xs transition-transform active:scale-95">
+                    <i class="ph ph-plus-bold"></i> 自定义
                 </button>
             </div>
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-4 sticky top-20 z-30">
-                <div class="relative flex-grow">
+            
+            <!-- 搜索栏 (Mobile Optimized) -->
+            <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 mb-4 flex flex-col gap-3 sticky top-16 z-30">
+                <div class="relative w-full">
                     <i class="ph ph-magnifying-glass absolute left-3 top-3 text-gray-400"></i>
-                    <input type="text" id="explore-search" placeholder="搜索景点名称..." class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <input type="text" id="explore-search" placeholder="搜景点..." class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
-                <select id="explore-filter" class="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none cursor-pointer">
-                    <option value="all">📍 所有类型</option>
-                    <option value="自然">🏔️ 自然风光</option>
-                    <option value="人文">🕌 人文古迹</option>
-                    <option value="滑雪">🎿 滑雪场</option>
-                    <option value="custom">✨ 我的自定义</option>
-                </select>
+                <div class="flex overflow-x-auto gap-2 pb-1 custom-scrollbar">
+                    <select id="explore-filter" class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs outline-none flex-shrink-0">
+                        <option value="all">全部类型</option>
+                        <option value="自然">🏔️ 自然</option>
+                        <option value="人文">🕌 人文</option>
+                        <option value="滑雪">🎿 滑雪</option>
+                        <option value="custom">✨ 自定义</option>
+                    </select>
+                </div>
             </div>
-            <div id="explore-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+
+            <div id="explore-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-20"></div>
         </section>
 
-        <!-- 2. 交互地图 -->
+        <!-- 2. 交互地图 (Mobile Optimized Layout) -->
         <section id="routes" class="tab-content">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-100px)]">
-                <div class="lg:col-span-3 flex flex-col gap-4 h-full overflow-hidden">
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-1/2">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="font-bold text-gray-800">📅 行程安排</h3>
-                            <button onclick="addDay()" class="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-medium hover:bg-blue-100 transition">+ 增加一天</button>
-                        </div>
-                        <div id="day-list" class="flex-grow overflow-y-auto space-y-2 pr-1 custom-scrollbar"></div>
+            <!-- 手机端改为上下布局：上部分列表，中间地图，下部分添加 -->
+            <div class="flex flex-col lg:grid lg:grid-cols-12 gap-4 h-auto lg:h-[calc(100vh-100px)]">
+                
+                <!-- 1. 天数选择 (Mobile: Horizontal Scroll, Desktop: Vertical) -->
+                <div class="lg:col-span-3 flex flex-col gap-3 bg-white p-3 rounded-2xl shadow-sm border border-gray-100 order-2 lg:order-1">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-bold text-gray-800 text-sm">📅 行程</h3>
+                        <button onclick="addDay()" class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100">+ 天数</button>
                     </div>
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-1/2">
-                        <h3 class="font-bold text-gray-800 mb-2 text-sm">📍 <span id="current-day-label">第1天</span> 的行程</h3>
-                        <div id="day-spots-list" class="flex-grow overflow-y-auto space-y-2 pr-1 custom-scrollbar empty:flex empty:items-center empty:justify-center empty:text-gray-400 empty:text-xs empty:after:content-['暂无景点，请从右侧添加']"></div>
+                    <!-- 手机端横向滚动 -->
+                    <div id="day-list" class="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto custom-scrollbar pb-2 lg:pb-0 h-auto lg:h-1/2"></div>
+                    
+                    <div class="mt-2 border-t pt-2 lg:h-1/2 lg:flex-col lg:flex hidden lg:flex">
+                         <h3 class="font-bold text-gray-800 mb-2 text-xs">📍 当日明细</h3>
+                         <div id="day-spots-list-desktop" class="flex-grow overflow-y-auto space-y-2 pr-1 custom-scrollbar text-xs"></div>
                     </div>
                 </div>
-                <div class="lg:col-span-6 bg-white rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden flex flex-col group">
-                    <div class="absolute top-4 left-4 z-10 flex flex-col gap-2">
-                         <div class="bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg shadow-sm text-xs font-medium border border-gray-200 flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-blue-500"></div> 交互地图</div>
-                    </div>
-                    <div class="absolute bottom-4 right-4 z-10 flex gap-2">
-                        <button onclick="resetMapView()" class="bg-white p-2 rounded-lg shadow border border-gray-200 hover:bg-gray-50 text-gray-600" title="复位"><i class="ph ph-arrows-out-cardinal"></i></button>
-                        <div class="flex bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-                            <button onclick="zoomMap(0.1)" class="p-2 hover:bg-gray-50 border-r border-gray-100 text-gray-600"><i class="ph ph-plus"></i></button>
-                            <button onclick="zoomMap(-0.1)" class="p-2 hover:bg-gray-50 text-gray-600"><i class="ph ph-minus"></i></button>
+
+                <!-- 2. 地图 (Mobile: Fixed Height, Desktop: Auto) -->
+                <div class="lg:col-span-6 bg-white rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden flex flex-col group order-1 lg:order-2">
+                    <div class="absolute top-3 left-3 z-10">
+                         <div class="bg-white/90 backdrop-blur px-2 py-1 rounded shadow-sm text-[10px] font-medium border border-gray-200 text-gray-600">
+                            第 <span id="current-day-num">1</span> 天
                         </div>
                     </div>
-                    <div class="flex-grow relative" id="map-wrapper">
+                    <div class="absolute bottom-3 right-3 z-10 flex gap-2">
+                        <button onclick="resetMapView()" class="bg-white p-2 rounded shadow text-gray-600 text-xs"><i class="ph ph-arrows-out-cardinal"></i></button>
+                        <div class="flex bg-white rounded shadow overflow-hidden">
+                            <button onclick="zoomMap(0.2)" class="p-2 border-r text-gray-600"><i class="ph ph-plus"></i></button>
+                            <button onclick="zoomMap(-0.2)" class="p-2 text-gray-600"><i class="ph ph-minus"></i></button>
+                        </div>
+                    </div>
+                    <!-- 手机端给个固定高度 -->
+                    <div class="relative w-full h-[350px] lg:h-full" id="map-wrapper">
                         <canvas id="route-canvas" class="block"></canvas>
-                        <div id="map-tooltip" class="absolute hidden bg-gray-900 text-white text-xs px-2 py-1 rounded pointer-events-none z-20 whitespace-nowrap"></div>
+                        <div id="map-tooltip" class="absolute hidden bg-gray-900/90 text-white text-xs px-2 py-1 rounded pointer-events-none z-20 whitespace-nowrap"></div>
                     </div>
-                    <div class="p-2 bg-gray-50 text-xs text-gray-500 text-center border-t border-gray-100">🖱️ 滚轮缩放 • 👆 拖拽平移 • 🎯 在添加景点时点击画布定点</div>
+                    <div class="p-2 bg-gray-50 text-[10px] text-gray-400 text-center">👆 单指拖拽 • 双指/滚轮缩放</div>
                 </div>
-                <div class="lg:col-span-3 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full">
-                    <h3 class="font-bold text-gray-800 mb-4">🏞️ 景点库</h3>
-                    <input type="text" id="spot-search" placeholder="搜索..." class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm mb-4 outline-none">
-                    <div id="all-spots-list" class="flex-grow overflow-y-auto space-y-2 pr-1 custom-scrollbar"></div>
+
+                <!-- 3. 当前天景点 & 添加 (Mobile: Below Map) -->
+                <div class="lg:col-span-3 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full order-3">
+                    <!-- Mobile only: Show spot list here -->
+                    <div class="lg:hidden mb-4">
+                        <h3 class="font-bold text-gray-800 mb-2 text-sm">📍 当日景点 (<span id="day-spot-count">0</span>)</h3>
+                        <div id="day-spots-list-mobile" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar text-xs"></div>
+                    </div>
+
+                    <h3 class="font-bold text-gray-800 mb-3 text-sm">➕ 添加景点</h3>
+                    <input type="text" id="spot-search" placeholder="搜索..." class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3 outline-none">
+                    <div id="all-spots-list" class="flex-grow overflow-y-auto space-y-2 pr-1 custom-scrollbar max-h-60 lg:max-h-none"></div>
                 </div>
             </div>
         </section>
 
-        <!-- 3. 智能预算 (核心修改点) -->
+        <!-- 3. 智能预算 -->
         <section id="budget" class="tab-content">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                <!-- 左侧配置 -->
-                <div class="lg:col-span-5 space-y-6">
-                    <!-- 自定义添加 -->
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <div class="flex items-center gap-2 mb-4 text-blue-600"><i class="ph ph-plus-circle text-xl"></i><h3 class="font-bold text-gray-800">添加自定义项目</h3></div>
-                        <div class="flex gap-2 mb-4 bg-blue-50/50 p-3 rounded-xl border border-blue-100">
-                            <input type="text" id="custom-item-name" placeholder="项目名称 (如: 滑雪票)" class="flex-grow bg-white border border-gray-200 rounded px-3 py-2 text-sm outline-none">
-                            <input type="number" id="custom-item-price" placeholder="金额" class="w-24 bg-white border border-gray-200 rounded px-3 py-2 text-sm outline-none">
-                            <button onclick="addCustomBudgetItem()" class="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 transition"><i class="ph ph-check-bold"></i></button>
-                        </div>
-                        <div id="custom-budget-list-left" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar text-sm text-gray-500">
-                            <!-- 左侧仅做简单列表或提示，主要展示在右侧大屏 -->
-                            <p class="text-xs text-gray-400 text-center">添加的项目将实时显示在右侧总览中</p>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 pb-20">
+                <!-- 自定义添加 -->
+                <div class="lg:col-span-5 space-y-4">
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                        <div class="flex items-center gap-2 mb-3 text-blue-600 text-sm font-bold"><i class="ph ph-plus-circle text-lg"></i> 添加支出</div>
+                        <div class="flex gap-2">
+                            <input type="text" id="custom-item-name" placeholder="项目 (如:滑雪)" class="flex-grow bg-gray-50 border-0 rounded-lg px-3 py-2 text-sm ring-1 ring-gray-200 focus:ring-blue-500 outline-none">
+                            <input type="number" id="custom-item-price" placeholder="¥" class="w-20 bg-gray-50 border-0 rounded-lg px-3 py-2 text-sm ring-1 ring-gray-200 focus:ring-blue-500 outline-none">
+                            <button onclick="addCustomBudgetItem()" class="bg-blue-600 text-white px-3 rounded-lg"><i class="ph ph-check-bold"></i></button>
                         </div>
                     </div>
                     
                     <!-- 基础参数 -->
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <h3 class="font-bold text-gray-800 mb-4">基础设定</h3>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div><label class="text-xs text-gray-500">人数</label><input type="number" id="budget-people" value="2" class="w-full mt-1 border rounded p-2 text-sm"></div>
-                            <div><label class="text-xs text-gray-500">天数</label><input type="number" id="budget-days" value="1" disabled class="w-full mt-1 bg-gray-100 border rounded p-2 text-sm"></div>
-                            <div><label class="text-xs text-gray-500">住宿(元/间)</label><input type="number" id="price-stay" value="400" class="w-full mt-1 border rounded p-2 text-sm"></div>
-                            <div><label class="text-xs text-gray-500">车费(元/天)</label><input type="number" id="price-trans" value="500" class="w-full mt-1 border rounded p-2 text-sm"></div>
-                            <div><label class="text-xs text-gray-500">餐饮(元/人)</label><input type="number" id="price-food" value="150" class="w-full mt-1 border rounded p-2 text-sm"></div>
-                            <div><label class="text-xs text-gray-500">门票(元/人)</label><input type="number" id="price-ticket" value="800" class="w-full mt-1 border rounded p-2 text-sm"></div>
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                        <h3 class="font-bold text-gray-800 mb-3 text-sm">基础设定</h3>
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div><label class="text-xs text-gray-400">人数</label><input type="number" id="budget-people" value="2" class="w-full mt-1 border rounded p-1.5"></div>
+                            <div><label class="text-xs text-gray-400">天数</label><input type="number" id="budget-days" value="1" disabled class="w-full mt-1 bg-gray-50 border rounded p-1.5 text-gray-400"></div>
+                            <div><label class="text-xs text-gray-400">住宿/间</label><input type="number" id="price-stay" value="400" class="w-full mt-1 border rounded p-1.5"></div>
+                            <div><label class="text-xs text-gray-400">车费/天</label><input type="number" id="price-trans" value="500" class="w-full mt-1 border rounded p-1.5"></div>
+                            <div><label class="text-xs text-gray-400">餐/人</label><input type="number" id="price-food" value="150" class="w-full mt-1 border rounded p-1.5"></div>
+                            <div><label class="text-xs text-gray-400">门票/人</label><input type="number" id="price-ticket" value="800" class="w-full mt-1 border rounded p-1.5"></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 右侧结果面板 (动态增长列表) -->
+                <!-- 结果面板 -->
                 <div class="lg:col-span-7">
-                    <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-3xl shadow-xl text-white h-full flex flex-col relative overflow-hidden">
-                        <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+                    <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-5 rounded-3xl shadow-xl text-white relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
                         
-                        <div class="mb-6 flex-grow">
-                            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2"><i class="ph ph-receipt"></i> 预算总览</h2>
-                            
-                            <!-- 动态列表容器 -->
-                            <div id="budget-summary-list" class="space-y-3 text-blue-100 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
-                                <!-- JS 将在这里注入内容 -->
+                        <div class="mb-4">
+                            <h2 class="text-lg font-bold mb-4 flex items-center gap-2 opacity-90"><i class="ph ph-receipt"></i> 预算清单</h2>
+                            <div id="budget-summary-list" class="space-y-2 text-sm text-blue-50 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
+                                <!-- JS Injected -->
                             </div>
                         </div>
 
-                        <div class="mt-4 pt-6 border-t border-white/20 bg-blue-700/30 -mx-8 -mb-8 p-8 backdrop-blur-sm">
-                            <div class="flex justify-between items-baseline">
-                                <span class="text-blue-200 font-medium">预估总计</span>
-                                <span class="text-5xl font-bold tracking-tight">¥<span id="disp-total">0</span></span>
+                        <div class="pt-4 border-t border-white/10 flex justify-between items-end">
+                            <div>
+                                <div class="text-blue-200 text-xs">预估总计</div>
+                                <div class="text-3xl font-bold mt-1">¥<span id="disp-total">0</span></div>
                             </div>
-                            <div class="text-right text-blue-300 mt-2 text-sm">人均: ¥<span id="disp-avg">0</span></div>
+                            <div class="text-right text-blue-200 text-xs">人均: ¥<span id="disp-avg">0</span></div>
                         </div>
                     </div>
                 </div>
@@ -184,298 +213,344 @@
 
         <!-- 4. 全景看板 -->
         <section id="data" class="tab-content">
-             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 text-center"><div class="text-xs text-gray-500">总预算</div><div class="text-2xl font-bold text-blue-600">¥<span id="dash-total">0</span></div></div>
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 text-center"><div class="text-xs text-gray-500">行程</div><div class="text-2xl font-bold text-gray-800"><span id="dash-days">0</span> 天</div></div>
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 text-center"><div class="text-xs text-gray-500">准备进度</div><div class="text-2xl font-bold text-green-600"><span id="dash-pack">0</span>%</div></div>
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 text-center"><div class="text-xs text-gray-500">滑雪点</div><div class="text-2xl font-bold text-purple-600"><span id="dash-ski-spots">0</span></div></div>
+             <div class="grid grid-cols-2 gap-3 mb-4">
+                <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 text-center"><div class="text-[10px] text-gray-400">总预算</div><div class="text-lg font-bold text-blue-600">¥<span id="dash-total">0</span></div></div>
+                <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 text-center"><div class="text-[10px] text-gray-400">行程</div><div class="text-lg font-bold text-gray-700"><span id="dash-days">0</span> 天</div></div>
+                <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 text-center"><div class="text-[10px] text-gray-400">准备</div><div class="text-lg font-bold text-green-600"><span id="dash-pack">0</span>%</div></div>
+                <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 text-center"><div class="text-[10px] text-gray-400">滑雪点</div><div class="text-lg font-bold text-purple-600"><span id="dash-ski-spots">0</span></div></div>
             </div>
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100"><canvas id="budgetDoughnutChart"></canvas></div>
-                <div class="lg:col-span-2 grid grid-cols-2 gap-6">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100"><canvas id="spotPolarChart"></canvas></div>
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <h3 class="font-bold mb-4">奇景预测 (-<span id="temp-val">20</span>°C)</h3>
-                        <input type="range" id="temp-slider" min="-40" max="5" value="-20" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mb-4">
-                        <div class="space-y-3">
-                            <div><div class="flex justify-between text-xs mb-1"><span>晨雾</span><span id="prob-fog">85%</span></div><div class="w-full bg-gray-100 h-1.5 rounded-full"><div id="bar-fog" class="bg-cyan-400 h-full" style="width:85%"></div></div></div>
-                            <div><div class="flex justify-between text-xs mb-1"><span>蓝冰</span><span id="prob-ice">90%</span></div><div class="w-full bg-gray-100 h-1.5 rounded-full"><div id="bar-ice" class="bg-blue-600 h-full" style="width:90%"></div></div></div>
-                        </div>
-                    </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-20">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-sm font-bold text-gray-700 mb-2">资金占比</h3>
+                    <div class="h-48"><canvas id="budgetDoughnutChart"></canvas></div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-sm font-bold text-gray-700 mb-2">玩法分布</h3>
+                    <div class="h-48"><canvas id="spotPolarChart"></canvas></div>
                 </div>
             </div>
         </section>
 
         <!-- 5. 装备清单 -->
         <section id="pack" class="tab-content">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                <div class="lg:col-span-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xl font-bold text-gray-800">超级装备清单</h2>
-                        <button onclick="addCustomGear()" class="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-200 transition">+ 自定义物品</button>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-16 h-16 relative flex-shrink-0">
+                        <canvas id="packChart"></canvas>
+                        <div class="absolute inset-0 flex items-center justify-center text-xs font-bold text-blue-600" id="pack-percent-text">0%</div>
                     </div>
-                    <div id="gear-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                    <div class="flex-grow">
+                        <h2 class="font-bold text-gray-800">准备进度</h2>
+                        <p class="text-xs text-gray-400 mt-1">已选 <span id="pack-checked-count">0</span> / <span id="pack-total-count">0</span></p>
+                    </div>
+                    <button onclick="exportGearList()" class="bg-blue-50 text-blue-600 p-2 rounded-lg text-xl"><i class="ph ph-export"></i></button>
                 </div>
-                <div class="lg:col-span-4 space-y-6">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
-                        <h3 class="font-bold text-gray-800 mb-4 self-start">准备进度</h3>
-                        <div class="w-48 h-48 relative">
-                            <canvas id="packChart"></canvas>
-                            <div class="absolute inset-0 flex items-center justify-center flex-col"><span class="text-3xl font-bold text-blue-600" id="pack-percent-text">0%</span><span class="text-xs text-gray-400">已完成</span></div>
-                        </div>
-                    </div>
-                    <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100">
-                        <h3 class="font-bold text-blue-800 mb-2">导出清单</h3>
-                        <button onclick="exportGearList()" class="w-full bg-blue-600 text-white py-2.5 rounded-xl shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition flex items-center justify-center gap-2"><i class="ph ph-export"></i> 导出 TXT 文件</button>
-                    </div>
-                </div>
+                <button onclick="addCustomGear()" class="w-full py-2 border border-dashed border-gray-300 rounded-xl text-xs text-gray-500 mb-4">+ 添加自定义物品</button>
+                <div id="gear-container" class="space-y-4 pb-20"></div>
             </div>
         </section>
     </main>
 
-    <!-- Modal: 全能自定义景点弹窗 (保持不变) -->
+    <!-- Mobile Bottom Navigation (Visible < 768px) -->
+    <nav class="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 z-50 flex justify-around items-center pb-safe pt-2 px-1 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <button onclick="switchTab('explore')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400 active" data-tab="explore">
+            <i class="ph ph-mountains text-2xl mb-0.5"></i><span class="text-[10px]">百科</span>
+        </button>
+        <button onclick="switchTab('routes')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="routes">
+            <i class="ph ph-map-trifold text-2xl mb-0.5"></i><span class="text-[10px]">地图</span>
+        </button>
+        <!-- Center Action Button -->
+        <button onclick="openAttractionModal(true)" class="flex flex-col items-center justify-center w-12 h-12 bg-blue-600 rounded-full text-white shadow-lg -mt-6 border-4 border-gray-50">
+            <i class="ph ph-plus text-2xl"></i>
+        </button>
+        <button onclick="switchTab('budget')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="budget">
+            <i class="ph ph-calculator text-2xl mb-0.5"></i><span class="text-[10px]">预算</span>
+        </button>
+        <button onclick="switchTab('data')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="data">
+            <i class="ph ph-chart-pie-slice text-2xl mb-0.5"></i><span class="text-[10px]">统计</span>
+        </button>
+    </nav>
+
+    <!-- Modal (Universal) -->
     <div id="attraction-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
-            <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold text-gray-800">📍 自定义景点</h3><button onclick="closeModal()" class="text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button></div>
-            <div class="space-y-4">
-                <div class="relative group cursor-pointer" onclick="document.getElementById('modal-img-input').click()"><div id="modal-img-preview" class="w-full h-40 bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 group-hover:bg-gray-50 group-hover:border-blue-300 transition overflow-hidden"><i class="ph ph-image text-3xl mb-2"></i><span class="text-xs">点击替换图片</span></div><input type="file" id="modal-img-input" accept="image/*" class="hidden" onchange="previewImage(this)"></div>
-                <div class="grid grid-cols-2 gap-4"><input type="text" id="modal-name" placeholder="景点名称" class="w-full border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"><select id="modal-type" class="w-full border border-gray-200 rounded-lg p-3 text-sm outline-none"><option value="自然">类型：自然风光</option><option value="人文">类型：人文古迹</option><option value="滑雪">类型：滑雪场</option><option value="custom">类型：私藏</option></select></div>
-                <input type="text" id="modal-tags" placeholder="标签 (空格分隔)" class="w-full border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                <textarea id="modal-desc" placeholder="备注..." class="w-full border border-gray-200 rounded-lg p-3 text-sm h-24 focus:ring-2 focus:ring-blue-500 outline-none resize-none"></textarea>
-                <div class="bg-blue-50 p-3 rounded-lg flex justify-between items-center"><div class="text-xs text-blue-700"><span class="font-bold">坐标：</span><span id="modal-coords-display">未设置</span></div><button onclick="pickLocationFromModal()" class="bg-white text-blue-600 px-3 py-1.5 rounded-md text-xs font-bold border border-blue-200 hover:bg-blue-50 shadow-sm flex items-center gap-1"><i class="ph ph-crosshair"></i> 地图定点</button></div>
+        <div class="bg-white rounded-2xl w-full max-w-sm p-5 shadow-2xl animate-[fadeIn_0.2s_ease-out]">
+            <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-gray-800">自定义地点</h3><button onclick="closeModal()" class="text-gray-400"><i class="ph ph-x text-xl"></i></button></div>
+            <div class="space-y-3">
+                <input type="text" id="modal-name" placeholder="名称 (如: 隐藏打卡点)" class="w-full bg-gray-50 border-0 rounded-xl p-3 text-sm ring-1 ring-gray-200 focus:ring-blue-500 outline-none">
+                <div class="flex gap-2">
+                    <select id="modal-type" class="bg-gray-50 border-0 rounded-xl p-3 text-sm ring-1 ring-gray-200 outline-none flex-grow">
+                        <option value="custom">✨ 私藏</option><option value="自然">🏔️ 自然</option><option value="人文">🕌 人文</option><option value="滑雪">🎿 滑雪</option>
+                    </select>
+                    <button onclick="pickLocationFromModal()" class="bg-blue-50 text-blue-600 px-3 rounded-xl text-sm font-medium border border-blue-100 whitespace-nowrap">📍 选位置</button>
+                </div>
+                <textarea id="modal-desc" placeholder="备注..." class="w-full bg-gray-50 border-0 rounded-xl p-3 text-sm ring-1 ring-gray-200 h-20 outline-none resize-none"></textarea>
+                <div class="text-xs text-gray-400 text-center" id="modal-coords-display">坐标: 未设置</div>
             </div>
-            <div class="mt-6 flex justify-end gap-3"><button onclick="closeModal()" class="px-5 py-2.5 text-gray-500 hover:bg-gray-100 rounded-xl font-medium transition">取消</button><button onclick="saveCustomSpot()" class="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition">保存</button></div>
+            <button onclick="saveCustomSpot()" class="w-full mt-5 bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-500/30">保 存</button>
         </div>
     </div>
 
     <script>
-        // --- 数据核心 ---
+        // --- 核心逻辑 ---
         const defaultSpots = [
-            { id: 1, name: "乌鲁木齐", region: "北疆", type: "人文", tags: ["大巴扎"], desc: "首府", img: null, x: 500, y: 300 },
-            { id: 2, name: "禾木村", region: "北疆", type: "自然", tags: ["晨雾"], desc: "神的自留地", img: null, x: 450, y: 100 },
-            { id: 3, name: "喀纳斯", region: "北疆", type: "自然", tags: ["蓝冰"], desc: "王者之水", img: null, x: 400, y: 80 },
-            { id: 4, name: "赛里木湖", region: "北疆", type: "自然", tags: ["蓝冰"], desc: "大西洋眼泪", img: null, x: 200, y: 350 },
-            { id: 5, name: "喀什古城", region: "南疆", type: "人文", tags: ["异域"], desc: "千年古城", img: null, x: 100, y: 800 },
-            { id: 6, name: "可可托海", region: "北疆", type: "滑雪", tags: ["落差"], desc: "滑雪天堂", img: null, x: 600, y: 150 },
+            { id: 1, name: "乌鲁木齐", type: "人文", desc: "首府", x: 500, y: 300, tags: ["中转"] },
+            { id: 2, name: "禾木村", type: "自然", desc: "晨雾", x: 450, y: 100, tags: ["摄影"] },
+            { id: 3, name: "喀纳斯", type: "自然", desc: "湖怪", x: 400, y: 80, tags: ["徒步"] },
+            { id: 4, name: "赛里木湖", type: "自然", desc: "蓝冰", x: 200, y: 350, tags: ["自驾"] },
+            { id: 5, name: "喀什", type: "人文", desc: "古城", x: 100, y: 800, tags: ["美食"] },
+            { id: 6, name: "可可托海", type: "滑雪", desc: "滑雪", x: 600, y: 150, tags: ["极限"] }
         ];
-        const defaultGear = {
-            "核心保暖": ["羽绒服", "冲锋衣", "保暖内衣", "羊毛袜", "雪地靴"],
-            "滑雪装备": ["头盔", "雪镜", "护脸", "手套", "护具"],
-            "电子设备": ["充电宝", "相机电池", "无人机", "数据线"],
-            "药品个护": ["感冒药", "肠胃药", "防晒霜", "润唇膏"]
-        };
+        const defaultGear = { "证件": ["身份证","驾照"], "衣物": ["羽绒服","保暖衣","雪地靴"], "滑雪": ["手套","护目镜"], "药品": ["感冒药","肠胃药"] };
+        
         let state = {
-            spots: [...defaultSpots], itinerary: [[]], currentDayIndex: 0,
-            customBudget: [], customGear: [], weatherTemp: -20,
+            spots: [...defaultSpots], itinerary: [[]], currentDayIndex: 0, customBudget: [], customGear: [],
             isPickingMode: false, mapScale: 1, mapOffset: {x:0,y:0}, isDragging: false, startDrag: {x:0,y:0}, tempSpotData: null
         };
 
-        // --- 初始化 ---
         document.addEventListener('DOMContentLoaded', () => {
             renderExploreGrid(); renderDayList(); renderAllSpots(); renderBudget(); renderGear(); initCharts();
             setTimeout(() => { initMapEvents(); renderMap(); }, 100);
+            
+            // Event Listeners
             document.getElementById('explore-search').addEventListener('input', renderExploreGrid);
             document.getElementById('explore-filter').addEventListener('change', renderExploreGrid);
             document.getElementById('spot-search').addEventListener('input', renderAllSpots);
-            ['budget-people', 'price-stay', 'price-trans', 'price-food', 'price-ticket'].forEach(id => document.getElementById(id).addEventListener('input', renderBudget));
-            document.getElementById('temp-slider').addEventListener('input', (e) => { state.weatherTemp = parseInt(e.target.value); document.getElementById('temp-val').innerText = state.weatherTemp; });
-            document.querySelectorAll('.nav-btn[data-tab="data"]').forEach(btn => btn.addEventListener('click', updateDashboard));
+            ['budget-people','price-stay','price-trans','price-food','price-ticket'].forEach(id=>document.getElementById(id).addEventListener('input',renderBudget));
+            
+            // Mobile Nav Logic
+            document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+                btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+            });
         });
 
-        // --- 预算逻辑 (核心修改) ---
-        function addCustomBudgetItem() {
-            const n = document.getElementById('custom-item-name').value;
-            const p = parseFloat(document.getElementById('custom-item-price').value);
-            if(n && p) { state.customBudget.push({name:n, price:p, id: Date.now()}); document.getElementById('custom-item-name').value=''; document.getElementById('custom-item-price').value=''; renderBudget(); }
-        }
-        function renderBudget() {
-            const p = parseInt(document.getElementById('budget-people').value)||1;
-            const d = parseInt(document.getElementById('budget-days').value)||1;
-            const stay = parseFloat(document.getElementById('price-stay').value)||0;
-            const trans = parseFloat(document.getElementById('price-trans').value)||0;
-            const food = parseFloat(document.getElementById('price-food').value)||0;
-            const ticket = parseFloat(document.getElementById('price-ticket').value)||0;
-
-            const tStay = (stay*Math.ceil(p/2))*(d-1);
-            const tTrans = trans*d;
-            const tMisc = (food*p*d)+(ticket*p);
-            
-            // FIX: Added IDs to spans so chart can read them
-            let listHtml = `
-                <div class="flex justify-between items-center p-3 bg-white/10 rounded-xl border border-white/10"><span>🏨 住宿费</span><span class="font-mono text-lg font-bold">¥<span id="disp-stay">${tStay}</span></span></div>
-                <div class="flex justify-between items-center p-3 bg-white/10 rounded-xl border border-white/10"><span>🚗 交通费</span><span class="font-mono text-lg font-bold">¥<span id="disp-trans">${tTrans}</span></span></div>
-                <div class="flex justify-between items-center p-3 bg-white/10 rounded-xl border border-white/10"><span>🥘 食/票</span><span class="font-mono text-lg font-bold">¥<span id="disp-misc">${tMisc}</span></span></div>
-            `;
-            
-            let tCustomTotal = 0;
-            state.customBudget.forEach((item, idx) => {
-                tCustomTotal += item.price;
-                listHtml += `
-                    <div class="flex justify-between items-center p-3 bg-orange-500/20 rounded-xl border border-orange-500/30 text-orange-100 budget-item-enter relative group">
-                        <span class="flex items-center gap-2"><i class="ph ph-star-four"></i> ${item.name}</span>
-                        <div class="flex items-center gap-3">
-                            <span class="font-mono text-lg font-bold">¥${item.price}</span>
-                            <button onclick="removeBudgetItem(${idx})" class="text-white/50 hover:text-white opacity-0 group-hover:opacity-100 transition"><i class="ph ph-trash"></i></button>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            document.getElementById('budget-summary-list').innerHTML = listHtml;
-            
-            const leftList = document.getElementById('custom-budget-list-left');
-            if(leftList) {
-                 leftList.innerHTML = state.customBudget.map((item, idx) => 
-                    `<div class="flex justify-between items-center text-xs p-1 px-2 bg-gray-50 rounded text-gray-600"><span>${item.name}</span><span>¥${item.price}</span></div>`
-                 ).join('');
-            }
-
-            const total = tStay+tTrans+tMisc+tCustomTotal;
-            document.getElementById('disp-total').innerText=total.toLocaleString();
-            document.getElementById('disp-avg').innerText=Math.round(total/p).toLocaleString();
-        }
-        
-        function removeBudgetItem(idx) {
-            state.customBudget.splice(idx, 1);
-            renderBudget();
-        }
-
-        // --- 地图 (同V3.2) ---
+        // --- 1. Map Engine (Touch Support Added) ---
         function initMapEvents() {
             const w = document.getElementById('map-wrapper');
+            
+            // Mouse
             w.addEventListener('wheel', e => { e.preventDefault(); zoomMap(e.deltaY>0?0.9:1.1); });
-            w.addEventListener('mousedown', e => { state.isDragging=true; state.startDrag={x:e.clientX,y:e.clientY}; w.style.cursor='grabbing'; if(state.isPickingMode) handleMapClick(e); });
-            window.addEventListener('mousemove', e => { if(state.isDragging){ state.mapOffset.x+=e.clientX-state.startDrag.x; state.mapOffset.y+=e.clientY-state.startDrag.y; state.startDrag={x:e.clientX,y:e.clientY}; renderMap(); } handleMapHover(e); });
+            w.addEventListener('mousedown', e => { state.isDragging=true; state.startDrag={x:e.clientX,y:e.clientY}; w.style.cursor='grabbing'; if(state.isPickingMode) handleMapClick(e.clientX, e.clientY, w); });
+            window.addEventListener('mousemove', e => { if(state.isDragging) handleDrag(e.clientX, e.clientY); });
             window.addEventListener('mouseup', () => { state.isDragging=false; w.style.cursor=state.isPickingMode?'crosshair':'grab'; });
+
+            // Touch (New!)
+            w.addEventListener('touchstart', e => { 
+                if(e.touches.length === 1) {
+                    state.isDragging=true; 
+                    state.startDrag={x:e.touches[0].clientX, y:e.touches[0].clientY};
+                }
+            }, {passive: false});
+            
+            w.addEventListener('touchmove', e => {
+                if(state.isDragging && e.touches.length === 1) {
+                    e.preventDefault(); // Prevent scroll
+                    handleDrag(e.touches[0].clientX, e.touches[0].clientY);
+                }
+            }, {passive: false});
+
+            w.addEventListener('touchend', () => { state.isDragging=false; });
         }
+
+        function handleDrag(cx, cy) {
+            const dx = cx - state.startDrag.x;
+            const dy = cy - state.startDrag.y;
+            state.mapOffset.x += dx; state.mapOffset.y += dy;
+            state.startDrag = {x:cx, y:cy};
+            renderMap();
+        }
+
         function zoomMap(delta) { const ns=state.mapScale+delta; if(ns>0.2 && ns<5) { state.mapScale=ns; renderMap(); } }
         function resetMapView() { state.mapScale=1; state.mapOffset={x:0,y:0}; renderMap(); }
+
         function renderMap() {
             const cvs=document.getElementById('route-canvas'), ctx=cvs.getContext('2d'), w=document.getElementById('map-wrapper');
             cvs.width=w.offsetWidth; cvs.height=w.offsetHeight; ctx.clearRect(0,0,cvs.width,cvs.height);
             ctx.save(); ctx.translate(cvs.width/2+state.mapOffset.x, cvs.height/2+state.mapOffset.y); ctx.scale(state.mapScale,state.mapScale); ctx.translate(-cvs.width/2,-cvs.height/2);
-            const vs=1000, sx=1, sy=1, stX=(cvs.width-vs)/2, stY=(cvs.height-vs)/2;
+            
+            const vs=1000, stX=(cvs.width-vs)/2, stY=(cvs.height-vs)/2; // Virtual canvas 1000x1000 centered
+
+            // Lines
             state.itinerary.forEach((dS,di)=>{
-                if(dS.length<2)return; ctx.beginPath(); ctx.strokeStyle=di===state.currentDayIndex?'#3B82F6':'#94A3B8'; ctx.lineWidth=di===state.currentDayIndex?4/state.mapScale:2/state.mapScale; ctx.setLineDash(di===state.currentDayIndex?[]:[10,10]);
+                if(dS.length<2)return; ctx.beginPath(); ctx.strokeStyle=di===state.currentDayIndex?'#2563EB':'#CBD5E1'; ctx.lineWidth=di===state.currentDayIndex?3/state.mapScale:2/state.mapScale;
+                ctx.setLineDash(di===state.currentDayIndex?[]:[5,5]);
                 dS.forEach((id,idx)=>{const s=state.spots.find(sp=>sp.id===id); if(s) idx===0?ctx.moveTo(stX+s.x,stY+s.y):ctx.lineTo(stX+s.x,stY+s.y);}); ctx.stroke();
             });
+
+            // Points
             state.spots.forEach(s=>{
                 const cx=stX+s.x, cy=stY+s.y, act=state.itinerary[state.currentDayIndex].includes(s.id);
-                ctx.beginPath(); ctx.arc(cx,cy,(act?8:5)/Math.sqrt(state.mapScale),0,Math.PI*2); ctx.fillStyle=act?'#3B82F6':'#CBD5E1'; ctx.fill();
-                ctx.fillStyle='#475569'; ctx.font=`${12/state.mapScale}px Noto Sans SC`; ctx.fillText(s.name,cx+10,cy);
+                ctx.beginPath(); ctx.arc(cx,cy,(act?8:5)/Math.sqrt(state.mapScale),0,Math.PI*2); ctx.fillStyle=act?'#2563EB':'#94A3B8'; ctx.fill();
+                if(act || state.mapScale > 1.5) { ctx.fillStyle='#334155'; ctx.font=`${12/state.mapScale}px sans-serif`; ctx.fillText(s.name,cx+10,cy); }
             });
             ctx.restore();
         }
-        function pickLocationFromModal() { state.tempSpotData={name:document.getElementById('modal-name').value, tags:document.getElementById('modal-tags').value, desc:document.getElementById('modal-desc').value, imgSrc:document.querySelector('#modal-img-preview img')?.src}; state.isPickingMode=true; document.getElementById('attraction-modal').classList.add('hidden'); switchTab('routes'); document.getElementById('map-wrapper').style.cursor='crosshair'; }
-        function handleMapClick(e) {
-            if(!state.isPickingMode) return;
-            const w=document.getElementById('map-wrapper'), rect=w.getBoundingClientRect();
-            const mx=e.clientX-rect.left, my=e.clientY-rect.top;
-            const cx=w.offsetWidth/2+state.mapOffset.x, cy=w.offsetHeight/2+state.mapOffset.y;
-            const ux=(mx-cx)/state.mapScale, uy=(my-cy)/state.mapScale;
-            if(!state.tempSpotData) state.tempSpotData={};
-            state.tempSpotData.x=ux+w.offsetWidth/2-(w.offsetWidth-1000)/2; state.tempSpotData.y=uy+w.offsetHeight/2-(w.offsetHeight-1000)/2;
-            state.isPickingMode=false; document.getElementById('map-wrapper').style.cursor='grab'; openAttractionModal(false);
+
+        // --- 2. Budget Logic (ID fix included) ---
+        function addCustomBudgetItem() {
+            const n=document.getElementById('custom-item-name').value, p=parseFloat(document.getElementById('custom-item-price').value);
+            if(n&&p){state.customBudget.push({name:n,price:p}); document.getElementById('custom-item-name').value=''; document.getElementById('custom-item-price').value=''; renderBudget();}
         }
-        function handleMapHover(e) {
-            const tip=document.getElementById('map-tooltip'); if(state.isPickingMode||state.isDragging){tip.classList.add('hidden');return;}
-            const w=document.getElementById('map-wrapper'), rect=w.getBoundingClientRect();
-            const mx=e.clientX-rect.left, my=e.clientY-rect.top;
-            const cx=w.offsetWidth/2+state.mapOffset.x, cy=w.offsetHeight/2+state.mapOffset.y;
-            const stX=(w.offsetWidth-1000)/2, stY=(w.offsetHeight-1000)/2;
-            const h=state.spots.find(s=>{
-                const sx=cx+(stX+s.x-w.offsetWidth/2)*state.mapScale, sy=cy+(stY+s.y-w.offsetHeight/2)*state.mapScale;
-                return Math.abs(sx-mx)<10 && Math.abs(sy-my)<10;
+        function removeBudgetItem(i){state.customBudget.splice(i,1); renderBudget();}
+        
+        function renderBudget() {
+            const p=parseInt(document.getElementById('budget-people').value)||1, d=parseInt(document.getElementById('budget-days').value)||1;
+            const stay=parseFloat(document.getElementById('price-stay').value)||0, trans=parseFloat(document.getElementById('price-trans').value)||0;
+            const food=parseFloat(document.getElementById('price-food').value)||0, ticket=parseFloat(document.getElementById('price-ticket').value)||0;
+            
+            const tStay=(stay*Math.ceil(p/2))*(d-1), tTrans=trans*d, tMisc=(food*p*d)+(ticket*p);
+            let listHtml=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🏨 住宿</span><span class="font-mono font-bold">¥<span id="disp-stay">${tStay}</span></span></div>`;
+            listHtml+=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🚗 交通</span><span class="font-mono font-bold">¥<span id="disp-trans">${tTrans}</span></span></div>`;
+            listHtml+=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🥘 食/票</span><span class="font-mono font-bold">¥<span id="disp-misc">${tMisc}</span></span></div>`;
+            
+            let tCustom=0;
+            state.customBudget.forEach((i,x)=>{
+                tCustom+=i.price;
+                listHtml+=`<div class="flex justify-between items-center p-2 bg-orange-500/20 rounded-lg border border-orange-500/30 text-orange-100 budget-item-enter relative group"><span>${i.name}</span><div class="flex items-center gap-2"><span class="font-mono font-bold">¥${i.price}</span><button onclick="removeBudgetItem(${x})" class="text-white/70"><i class="ph ph-trash"></i></button></div></div>`;
             });
-            if(h){ tip.style.left=(mx+15)+'px'; tip.style.top=my+'px'; tip.innerText=h.name; tip.classList.remove('hidden'); } else tip.classList.add('hidden');
+            // Hack for Dashboard to read custom total easily
+            listHtml+=`<span id="disp-custom" style="display:none">${tCustom}</span>`;
+
+            document.getElementById('budget-summary-list').innerHTML=listHtml;
+            const total=tStay+tTrans+tMisc+tCustom;
+            document.getElementById('disp-total').innerText=total.toLocaleString();
+            document.getElementById('disp-avg').innerText=Math.round(total/p).toLocaleString();
         }
 
-        // --- 装备 & 通用 ---
-        let packChartInstance;
-        function renderGear() {
-            const c=document.getElementById('gear-container'); c.innerHTML='';
-            let cats={...defaultGear}; if(state.customGear.length) cats["自定义"]=state.customGear;
-            for(const [k,v] of Object.entries(cats)){
-                c.innerHTML+=`<div><h4 class="font-bold text-gray-700 mb-2 border-l-4 border-blue-500 pl-2">${k}</h4><div class="space-y-2">${v.map(i=>`<label class="flex items-center space-x-2 text-sm text-gray-500 cursor-pointer hover:bg-gray-50 p-1 rounded"><input type="checkbox" class="rounded text-blue-600 w-4 h-4 gear-check" data-item="${i}" onchange="updateGearStats()"><span>${i}</span></label>`).join('')}</div></div>`;
-            }
-            updateGearStats();
+        // --- 3. Dashboard Updates ---
+        function updateDashboard() {
+            renderBudget();
+            const t=document.getElementById('disp-total').innerText, d=state.itinerary.length;
+            const totGear=document.querySelectorAll('.gear-check').length, chkGear=document.querySelectorAll('.gear-check:checked').length;
+            
+            document.getElementById('dash-total').innerText=t;
+            document.getElementById('dash-days').innerText=d;
+            document.getElementById('dash-pack').innerText=totGear?Math.round(chkGear/totGear*100):0;
+            document.getElementById('dash-ski-spots').innerText=state.itinerary.flat().map(id=>state.spots.find(s=>s.id===id)).filter(s=>s&&s.type==='滑雪').length;
+            
+            updateCharts();
         }
-        function updateGearStats() {
-            const t=document.querySelectorAll('.gear-check').length, c=document.querySelectorAll('.gear-check:checked').length;
-            document.getElementById('pack-percent-text').innerText=(t===0?0:Math.round(c/t*100))+'%';
-            if(packChartInstance){ packChartInstance.data.datasets[0].data=[c,t-c]; packChartInstance.update(); }
-            else{ const ctx=document.getElementById('packChart').getContext('2d'); packChartInstance=new Chart(ctx,{type:'doughnut',data:{labels:['已准备','未准备'],datasets:[{data:[c,t-c],backgroundColor:['#3B82F6','#E5E7EB'],borderWidth:0,cutout:'80%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}}}}); }
-        }
-        function exportGearList() {
-            let txt="=== 新疆旅行清单 ===\n\n"; const cbs=document.querySelectorAll('.gear-check');
-            let cats={...defaultGear}; if(state.customGear.length) cats["自定义"]=state.customGear;
-            for(const [k,v] of Object.entries(cats)){ txt+=`[ ${k} ]\n`; v.forEach(i=>{ const cb=Array.from(cbs).find(c=>c.dataset.item===i); txt+=`${cb&&cb.checked?'[x]':'[ ]'} ${i}\n`; }); txt+="\n"; }
-            const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([txt],{type:"text/plain"})); a.download="清单.txt"; a.click();
-        }
-        function addCustomGear() { const n=prompt("名称"); if(n){state.customGear.push(n); renderGear();} }
 
-        // --- 其他通用 (复用V3.2) ---
+        // --- 4. Charts ---
+        let budgetChart, polarChart, packChart;
+        function initCharts() {
+            budgetChart=new Chart(document.getElementById('budgetDoughnutChart'),{type:'doughnut',data:{labels:['住','行','食','自'],datasets:[{data:[1,1,1,1],backgroundColor:['#3B82F6','#10B981','#8B5CF6','#F97316'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:10}}}}});
+            polarChart=new Chart(document.getElementById('spotPolarChart'),{type:'polarArea',data:{labels:['自然','人文','滑雪','自定'],datasets:[{data:[1,1,1,0],backgroundColor:['#38BDF8aa','#A78BFAaa','#F97316aa','#FBBF24aa'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{ticks:{display:false}}},plugins:{legend:{position:'right',labels:{boxWidth:10}}}}});
+            packChart=new Chart(document.getElementById('packChart'),{type:'doughnut',data:{datasets:[{data:[0,1],backgroundColor:['#2563EB','#E5E7EB'],borderWidth:0,cutout:'85%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{tooltip:{enabled:false}}}});
+        }
+        function updateCharts() {
+            // Budget
+            const s=parseInt(document.getElementById('disp-stay').innerText), tr=parseInt(document.getElementById('disp-trans').innerText);
+            const m=parseInt(document.getElementById('disp-misc').innerText), c=parseInt(document.getElementById('disp-custom').innerText);
+            budgetChart.data.datasets[0].data=[s,tr,m,c]; budgetChart.update();
+            // Polar
+            const ids=state.itinerary.flat(), sp=ids.map(id=>state.spots.find(s=>s.id===id)).filter(s=>s);
+            polarChart.data.datasets[0].data=[sp.filter(s=>s.type==='自然').length,sp.filter(s=>s.type==='人文').length,sp.filter(s=>s.type==='滑雪').length,sp.filter(s=>s.type==='custom').length]; polarChart.update();
+        }
+
+        // --- 5. General Logic ---
         function renderExploreGrid() {
-            const g=document.getElementById('explore-grid'), term=document.getElementById('explore-search').value.toLowerCase(), flt=document.getElementById('explore-filter').value; g.innerHTML='';
+            const g=document.getElementById('explore-grid'), t=document.getElementById('explore-search').value.toLowerCase(), f=document.getElementById('explore-filter').value;
+            g.innerHTML='';
             state.spots.forEach(s=>{
-                if((s.name.toLowerCase().includes(term)||s.tags.join('').includes(term))&&(flt==='all'||(flt==='custom'?s.id>1000:s.type===flt))){
-                    let im=s.img?`<img src="${s.img}" class="w-full h-40 object-cover">`:`<div class="w-full h-40 bg-gray-100 flex items-center justify-center text-4xl text-gray-300 font-bold">${s.name[0]}</div>`;
-                    const div=document.createElement('div'); div.className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover-card flex flex-col h-full";
-                    div.innerHTML=`<div class="relative">${im}<span class="absolute top-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded backdrop-blur">${s.type}</span></div><div class="p-4 flex flex-col flex-grow"><h3 class="font-bold text-gray-800 text-lg">${s.name}</h3><p class="text-xs text-gray-500 mb-2">${s.desc||''}</p><div class="mt-auto"><button onclick="addSpotToRouteFromExplore(${s.id})" class="w-full bg-blue-50 text-blue-600 py-2 rounded-lg text-sm hover:bg-blue-100">加入行程</button></div></div>`;
+                if((s.name.includes(t)||s.tags.join('').includes(t))&&(f==='all'||(f==='custom'?s.id>1000:s.type===f))){
+                    const div=document.createElement('div'); div.className="bg-white rounded-xl shadow-sm p-3 border border-gray-100 flex flex-col justify-between";
+                    div.innerHTML=`<div><div class="flex justify-between"><h3 class="font-bold text-gray-800">${s.name}</h3><span class="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">${s.type}</span></div><p class="text-xs text-gray-400 mt-1">${s.desc||''}</p></div><button onclick="addToRoute(${s.id})" class="mt-3 w-full bg-blue-50 text-blue-600 text-xs py-2 rounded font-medium">加入行程</button>`;
                     g.appendChild(div);
                 }
             });
         }
-        function addSpotToRouteFromExplore(id) { state.itinerary[state.currentDayIndex].push(id); alert("已加入行程"); renderDayList(); }
+        function addToRoute(id){ state.itinerary[state.currentDayIndex].push(id); renderDayList(); switchTab('routes'); }
+        
         function renderDayList() {
-            const l=document.getElementById('day-list'); l.innerHTML=''; document.getElementById('budget-days').value=state.itinerary.length; renderBudget();
+            const l=document.getElementById('day-list'); l.innerHTML=''; 
+            document.getElementById('budget-days').value=state.itinerary.length;
+            renderBudget(); // update days in budget
             state.itinerary.forEach((s,i)=>{
-                const d=document.createElement('div'); d.className=`p-3 rounded-xl border-l-4 cursor-pointer mb-2 transition-all ${i===state.currentDayIndex?'active border-blue-500 bg-blue-50':'border-transparent hover:bg-gray-50'}`;
-                d.innerHTML=`<div class="flex justify-between items-center"><span class="font-bold text-sm text-gray-700">第 ${i+1} 天</span><span class="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500">${s.length}</span></div>`;
-                d.onclick=()=>{state.currentDayIndex=i;renderDayList();}; l.appendChild(d);
+                const div=document.createElement('div'); 
+                div.className=`flex-shrink-0 lg:flex-shrink w-20 lg:w-full p-2 lg:p-3 rounded-xl border border-gray-100 cursor-pointer text-center lg:text-left transition-all ${i===state.currentDayIndex?'bg-blue-50 border-blue-200 text-blue-700':'hover:bg-gray-50 text-gray-500'}`;
+                div.innerHTML=`<div class="font-bold text-xs">D${i+1}</div><div class="text-[10px] opacity-70">${s.length}点</div>`;
+                div.onclick=()=>{state.currentDayIndex=i;renderDayList();};
+                l.appendChild(div);
             });
+            document.getElementById('current-day-num').innerText=state.currentDayIndex+1;
+            document.getElementById('day-spot-count').innerText=state.itinerary[state.currentDayIndex].length;
             renderDaySpots(); renderMap();
         }
-        function addDay() { state.itinerary.push([]); state.currentDayIndex=state.itinerary.length-1; renderDayList(); }
+        function addDay(){ state.itinerary.push([]); state.currentDayIndex=state.itinerary.length-1; renderDayList(); }
+        
         function renderDaySpots() {
-            const l=document.getElementById('day-spots-list'); l.innerHTML=''; document.getElementById('current-day-label').innerText=`第 ${state.currentDayIndex+1} 天`;
-            state.itinerary[state.currentDayIndex].forEach((id,x)=>{
-                const s=state.spots.find(sp=>sp.id===id); if(!s)return;
-                l.innerHTML+=`<div class="flex items-center justify-between p-2 bg-gray-50 rounded mb-1"><div class="flex items-center gap-2"><span class="text-xs font-bold text-gray-300 w-4">${x+1}</span><span class="text-sm text-gray-700">${s.name}</span></div><div class="flex gap-2"><a href="https://www.amap.com/search?query=${encodeURIComponent(s.name)}" target="_blank" class="text-gray-300 hover:text-green-600"><i class="ph ph-navigation-arrow"></i></a><button onclick="removeSpot(${x})" class="text-gray-300 hover:text-red-500"><i class="ph ph-trash"></i></button></div></div>`;
+            const desktopL=document.getElementById('day-spots-list-desktop');
+            const mobileL=document.getElementById('day-spots-list-mobile');
+            const html = state.itinerary[state.currentDayIndex].map((id,i)=>{
+                const s=state.spots.find(sp=>sp.id===id); if(!s)return'';
+                return `<div class="flex justify-between items-center p-2 bg-gray-50 rounded"><span class="truncate">${i+1}. ${s.name}</span><button onclick="rmSpot(${i})" class="text-red-400 px-2">×</button></div>`;
+            }).join('');
+            desktopL.innerHTML=html; mobileL.innerHTML=html;
+        }
+        function rmSpot(i){state.itinerary[state.currentDayIndex].splice(i,1); renderDayList();}
+        
+        function renderAllSpots(){
+            const l=document.getElementById('all-spots-list'), t=document.getElementById('spot-search').value; l.innerHTML='';
+            state.spots.filter(s=>s.name.includes(t)).forEach(s=>{
+                const b=document.createElement('button'); b.className="w-full text-left p-2 hover:bg-gray-50 text-xs text-gray-600 flex justify-between";
+                b.innerHTML=`<span>${s.name}</span><span>+</span>`; b.onclick=()=>{state.itinerary[state.currentDayIndex].push(s.id);renderDayList();};
+                l.appendChild(b);
             });
         }
-        function removeSpot(x) { state.itinerary[state.currentDayIndex].splice(x,1); renderDayList(); }
-        function renderAllSpots() {
-            const l=document.getElementById('all-spots-list'), t=document.getElementById('spot-search').value.toLowerCase(); l.innerHTML='';
-            state.spots.filter(s=>s.name.toLowerCase().includes(t)).forEach(s=>{
-                const b=document.createElement('button'); b.className="w-full text-left p-2 hover:bg-blue-50 rounded-lg text-sm text-gray-600 hover:text-blue-700 transition flex justify-between group";
-                b.innerHTML=`<span>${s.name}</span><i class="ph ph-plus-circle text-blue-400 opacity-0 group-hover:opacity-100"></i>`;
-                b.onclick=()=>{state.itinerary[state.currentDayIndex].push(s.id); renderDayList();}; l.appendChild(b);
-            });
+
+        // --- Gear ---
+        function renderGear() {
+            const c=document.getElementById('gear-container'); c.innerHTML='';
+            let cats={...defaultGear}; if(state.customGear.length) cats["自定义"]=state.customGear;
+            for(const [k,v] of Object.entries(cats)){
+                c.innerHTML+=`<div><h4 class="font-bold text-gray-700 text-sm mb-2">${k}</h4><div class="grid grid-cols-2 gap-2">${v.map(i=>`<label class="flex items-center space-x-2 text-xs text-gray-500"><input type="checkbox" class="gear-check rounded text-blue-600" onchange="updateGearStats()"><span>${i}</span></label>`).join('')}</div></div>`;
+            }
+            updateGearStats();
         }
-        function openAttractionModal(r) { document.getElementById('attraction-modal').classList.remove('hidden'); if(r){document.getElementById('modal-name').value='';document.getElementById('modal-coords-display').innerText='未设置';state.tempSpotData=null;}else if(state.tempSpotData?.x) document.getElementById('modal-coords-display').innerText=`X:${Math.round(state.tempSpotData.x)}, Y:${Math.round(state.tempSpotData.y)}`; }
-        function closeModal() { document.getElementById('attraction-modal').classList.add('hidden'); state.isPickingMode=false; document.getElementById('map-wrapper').style.cursor='grab'; }
-        function previewImage(i) { if(i.files&&i.files[0]){const r=new FileReader(); r.onload=e=>document.getElementById('modal-img-preview').innerHTML=`<img src="${e.target.result}" class="w-full h-full object-cover">`; r.readAsDataURL(i.files[0]);} }
-        function saveCustomSpot() {
+        function updateGearStats(){
+            const t=document.querySelectorAll('.gear-check').length, c=document.querySelectorAll('.gear-check:checked').length;
+            document.getElementById('pack-checked-count').innerText=c; document.getElementById('pack-total-count').innerText=t;
+            document.getElementById('pack-percent-text').innerText=(t?Math.round(c/t*100):0)+'%';
+            if(packChart){packChart.data.datasets[0].data=[c,t-c]; packChart.update();}
+        }
+        function addCustomGear(){const n=prompt("名称"); if(n){state.customGear.push(n); renderGear();}}
+        function exportGearList(){
+            let txt="我的清单\n"; document.querySelectorAll('.gear-check').forEach(cb=>{if(cb.checked)txt+=`- [x] ${cb.nextElementSibling.innerText}\n`});
+            const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain'})); a.download='list.txt'; a.click();
+        }
+
+        // --- Utility ---
+        function switchTab(id) {
+            document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.querySelectorAll('.mobile-nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
+            document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('bg-gray-100', b.dataset.tab!==id));
+            
+            if(id==='routes') setTimeout(renderMap,100);
+            if(id==='data') updateDashboard();
+            window.scrollTo(0,0);
+        }
+        
+        // Modals
+        function openAttractionModal(r){document.getElementById('attraction-modal').classList.remove('hidden'); if(r){document.getElementById('modal-name').value=''; state.tempSpotData=null; document.getElementById('modal-coords-display').innerText='未设置';}}
+        function closeModal(){document.getElementById('attraction-modal').classList.add('hidden'); state.isPickingMode=false;}
+        function pickLocationFromModal(){state.tempSpotData={name:document.getElementById('modal-name').value}; state.isPickingMode=true; closeModal(); switchTab('routes'); alert("请点击地图");}
+        function handleMapClick(cx, cy, w){
+            const rect=w.getBoundingClientRect();
+            // Calc virtual coords
+            const vs=1000, stX=(w.offsetWidth-vs)/2, stY=(w.offsetHeight-vs)/2;
+            const mx=cx-rect.left, my=cy-rect.top;
+            const vx=(mx-w.offsetWidth/2-state.mapOffset.x)/state.mapScale+w.offsetWidth/2-stX;
+            const vy=(my-w.offsetHeight/2-state.mapOffset.y)/state.mapScale+w.offsetHeight/2-stY;
+            
+            if(!state.tempSpotData)state.tempSpotData={}; state.tempSpotData.x=vx; state.tempSpotData.y=vy;
+            state.isPickingMode=false; openAttractionModal(false);
+        }
+        function saveCustomSpot(){
             const n=document.getElementById('modal-name').value; if(!n)return;
-            state.spots.push({id:Date.now(), name:n, type:document.getElementById('modal-type').value, tags:document.getElementById('modal-tags').value.split(' '), desc:document.getElementById('modal-desc').value, img:document.querySelector('#modal-img-preview img')?.src, x:state.tempSpotData?.x||500, y:state.tempSpotData?.y||500});
+            state.spots.push({id:Date.now(), name:n, type:document.getElementById('modal-type').value, desc:document.getElementById('modal-desc').value, x:state.tempSpotData?.x||500, y:state.tempSpotData?.y||500, tags:[]});
             renderExploreGrid(); renderAllSpots(); renderMap(); closeModal();
         }
-        function updateDashboard() { renderBudget(); document.getElementById('dash-total').innerText=document.getElementById('disp-total').innerText; document.getElementById('dash-days').innerText=state.itinerary.length; document.getElementById('dash-pack').innerText=document.getElementById('pack-percent-text').innerText.replace('%',''); document.getElementById('dash-ski-spots').innerText=state.itinerary.flat().map(id=>state.spots.find(s=>s.id===id)).filter(s=>s&&s.type==='滑雪').length; updateBudgetChart(); }
-        let budgetDoughnutChart, spotPolarChart;
-        function initCharts() {
-             const c1=document.getElementById('budgetDoughnutChart').getContext('2d'); budgetDoughnutChart=new Chart(c1,{type:'doughnut',data:{labels:['住宿','交通','食/票','自定义'],datasets:[{data:[1,1,1,1],backgroundColor:['#60A5FA','#34D399','#A78BFA','#F97316'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false}});
-             const c2=document.getElementById('spotPolarChart').getContext('2d'); spotPolarChart=new Chart(c2,{type:'polarArea',data:{labels:['自然','人文','滑雪','自定义'],datasets:[{data:[1,1,1,0],backgroundColor:['rgba(56,189,248,0.6)','rgba(167,139,250,0.6)','rgba(249,115,22,0.6)','rgba(251,191,36,0.6)'],borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{ticks:{display:false}}}}});
-        }
-        function updateBudgetChart() {
-             const s=parseInt(document.getElementById('disp-stay').innerText.replace(/,/g,'')), t=parseInt(document.getElementById('disp-trans').innerText.replace(/,/g,'')), m=parseInt(document.getElementById('disp-misc').innerText.replace(/,/g,''));
-             let c=0; state.customBudget.forEach(i=>c+=i.price);
-             budgetDoughnutChart.data.datasets[0].data=[s,t,m,c]; budgetDoughnutChart.update();
-             // Polar update
-             const ids=state.itinerary.flat(), sp=ids.map(id=>state.spots.find(s=>s.id===id)).filter(s=>s);
-             spotPolarChart.data.datasets[0].data=[sp.filter(s=>s.type==='自然').length, sp.filter(s=>s.type==='人文').length, sp.filter(s=>s.type==='滑雪').length, sp.filter(s=>s.type==='custom').length]; spotPolarChart.update();
-        }
-        function switchTab(id) { document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active')); document.getElementById(id).classList.add('active'); if(id==='routes')setTimeout(renderMap,100); if(id==='data')updateDashboard(); }
     </script>
 </body>
 </html>
