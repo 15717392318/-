@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>旅行规划师 Pro | 部署版</title>
+    <title>旅行规划师 Pro | 实时同步版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -28,6 +28,11 @@
 
         /* 移动端底部导航激活态 */
         .mobile-nav-btn.active { color: #2563EB; }
+        
+        /* 滚动条美化 */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #CBD5E1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background-color: transparent; }
     </style>
 </head>
 <body class="flex flex-col min-h-screen">
@@ -60,6 +65,14 @@
     </header>
 
     <main class="flex-grow container mx-auto px-4 py-4">
+        
+        <!-- Loading State Placeholder -->
+        <div id="loading-state" class="absolute inset-0 bg-gray-50/70 backdrop-blur-sm z-40 flex items-center justify-center hidden">
+            <div class="flex flex-col items-center p-8 bg-white rounded-xl shadow-xl">
+                <div class="ph ph-spinner-gap animate-spin text-4xl text-blue-600 mb-3"></div>
+                <p class="text-gray-600 font-medium">正在连接与同步数据...</p>
+            </div>
+        </div>
 
         <!-- 1. 景点百科 -->
         <section id="explore" class="tab-content active">
@@ -72,10 +85,10 @@
             <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 mb-4 flex flex-col gap-3 sticky top-16 z-30">
                 <div class="relative w-full">
                     <i class="ph ph-magnifying-glass absolute left-3 top-3 text-gray-400"></i>
-                    <input type="text" id="explore-search" placeholder="搜景点..." class="w-full bg-gray-50 border-0 rounded-xl pl-9 pr-3 py-2.5 text-sm ring-1 ring-gray-200 outline-none">
+                    <input type="text" id="explore-search" placeholder="搜景点..." oninput="renderExploreGrid()" class="w-full bg-gray-50 border-0 rounded-xl pl-9 pr-3 py-2.5 text-sm ring-1 ring-gray-200 outline-none">
                 </div>
                 <div class="flex overflow-x-auto gap-2 pb-1 custom-scrollbar">
-                    <select id="explore-filter" class="bg-gray-50 border-0 rounded-xl px-3 py-2 text-xs outline-none flex-shrink-0 ring-1 ring-gray-200">
+                    <select id="explore-filter" onchange="renderExploreGrid()" class="bg-gray-50 border-0 rounded-xl px-3 py-2 text-xs outline-none flex-shrink-0 ring-1 ring-gray-200">
                         <option value="all">全部类型</option><option value="自然">🏔️ 自然</option><option value="人文">🕌 人文</option><option value="滑雪">🎿 滑雪</option><option value="custom">✨ 自定义</option>
                     </select>
                 </div>
@@ -93,15 +106,15 @@
                     </div>
                     <div id="day-list" class="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto custom-scrollbar pb-2 lg:pb-0 h-auto lg:h-1/2"></div>
                     <div class="mt-2 border-t pt-2 lg:h-1/2 lg:flex-col lg:flex hidden lg:flex">
-                         <h3 class="font-bold text-gray-800 mb-2 text-xs">📍 当日明细</h3>
-                         <div id="day-spots-list-desktop" class="flex-grow overflow-y-auto space-y-2 pr-1 custom-scrollbar text-xs"></div>
+                         <h3 class="font-bold text-gray-800 mb-2 text-xs">📍 当日明细</h3>
+                         <div id="day-spots-list-desktop" class="flex-grow overflow-y-auto space-y-2 pr-1 custom-scrollbar text-xs"></div>
                     </div>
                 </div>
                 <div class="lg:col-span-6 bg-white rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden flex flex-col group order-1 lg:order-2">
                     <div class="absolute top-3 left-3 z-10">
-                         <div class="bg-white/90 backdrop-blur px-2 py-1 rounded shadow-sm text-[10px] font-medium border border-gray-200 text-gray-600">
-                            第 <span id="current-day-num">1</span> 天
-                        </div>
+                         <div class="bg-white/90 backdrop-blur px-2 py-1 rounded shadow-sm text-[10px] font-medium border border-gray-200 text-gray-600">
+                            第 <span id="current-day-num">1</span> 天
+                          </div>
                     </div>
                     <div class="absolute bottom-3 right-3 z-10 flex gap-2">
                         <button onclick="resetMapView()" class="bg-white p-2 rounded shadow text-gray-600 text-xs"><i class="ph ph-arrows-out-cardinal"></i></button>
@@ -122,7 +135,7 @@
                         <div id="day-spots-list-mobile" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar text-xs"></div>
                     </div>
                     <h3 class="font-bold text-gray-800 mb-3 text-sm">➕ 添加景点</h3>
-                    <input type="text" id="spot-search" placeholder="搜索..." class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3 outline-none">
+                    <input type="text" id="spot-search" placeholder="搜索..." oninput="renderAllSpots()" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3 outline-none">
                     <div id="all-spots-list" class="flex-grow overflow-y-auto space-y-2 pr-1 custom-scrollbar max-h-60 lg:max-h-none"></div>
                 </div>
             </div>
@@ -137,18 +150,18 @@
                         <div class="flex gap-2">
                             <input type="text" id="custom-item-name" placeholder="项目 (如:滑雪票)" class="flex-grow bg-gray-50 border-0 rounded-lg px-3 py-2 text-sm ring-1 ring-gray-200 outline-none">
                             <input type="number" id="custom-item-price" placeholder="¥" class="w-20 bg-gray-50 border-0 rounded-lg px-3 py-2 text-sm ring-1 ring-gray-200 outline-none">
-                            <button onclick="addCustomBudgetItem()" class="bg-blue-600 text-white px-3 rounded-lg"><i class="ph ph-check-bold"></i></button>
+                            <button onclick="addCustomBudgetItem()" class="bg-blue-600 text-white px-3 rounded-lg hover:bg-blue-700 transition"><i class="ph ph-check-bold"></i></button>
                         </div>
                     </div>
                     <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                         <h3 class="font-bold text-gray-800 mb-3 text-sm">基础设定</h3>
                         <div class="grid grid-cols-2 gap-3 text-sm">
-                            <div><label class="text-xs text-gray-400">人数</label><input type="number" id="budget-people" value="2" class="w-full mt-1 border rounded p-1.5"></div>
+                            <div><label class="text-xs text-gray-400">人数</label><input type="number" id="budget-people" value="2" class="w-full mt-1 border rounded p-1.5" onchange="updateDashboard()"></div>
                             <div><label class="text-xs text-gray-400">天数</label><input type="number" id="budget-days" value="1" disabled class="w-full mt-1 bg-gray-50 border rounded p-1.5 text-gray-400"></div>
-                            <div><label class="text-xs text-gray-400">住宿/间</label><input type="number" id="price-stay" value="400" class="w-full mt-1 border rounded p-1.5"></div>
-                            <div><label class="text-xs text-gray-400">车费/天</label><input type="number" id="price-trans" value="500" class="w-full mt-1 border rounded p-1.5"></div>
-                            <div><label class="text-xs text-gray-400">餐/人</label><input type="number" id="price-food" value="150" class="w-full mt-1 border rounded p-1.5"></div>
-                            <div><label class="text-xs text-gray-400">门票/人</label><input type="number" id="price-ticket" value="800" class="w-full mt-1 border rounded p-1.5"></div>
+                            <div><label class="text-xs text-gray-400">住宿/间</label><input type="number" id="price-stay" value="400" class="w-full mt-1 border rounded p-1.5" onchange="updateDashboard()"></div>
+                            <div><label class="text-xs text-gray-400">车费/天</label><input type="number" id="price-trans" value="500" class="w-full mt-1 border rounded p-1.5" onchange="updateDashboard()"></div>
+                            <div><label class="text-xs text-gray-400">餐/人</label><input type="number" id="price-food" value="150" class="w-full mt-1 border rounded p-1.5" onchange="updateDashboard()"></div>
+                            <div><label class="text-xs text-gray-400">门票/人</label><input type="number" id="price-ticket" value="800" class="w-full mt-1 border rounded p-1.5" onchange="updateDashboard()"></div>
                         </div>
                     </div>
                 </div>
@@ -183,8 +196,8 @@
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"><h3 class="text-sm font-bold text-gray-700 mb-2">资金占比</h3><div class="h-48"><canvas id="budgetDoughnutChart"></canvas></div></div>
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"><h3 class="text-sm font-bold text-gray-700 mb-2">玩法分布</h3><div class="h-48"><canvas id="spotPolarChart"></canvas></div></div>
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 class="text-sm font-bold text-gray-700 mb-2">奇景预测 (-<span id="temp-val">-20</span>°C)</h3>
-                    <input type="range" id="temp-slider" min="-40" max="5" value="-20" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mb-4">
+                    <h3 class="text-sm font-bold text-gray-700 mb-2">奇景预测 (<span id="temp-val">--20</span>°C)</h3>
+                    <input type="range" id="temp-slider" min="-40" max="5" value="-20" oninput="updateDashboard()" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mb-4">
                     <div class="grid grid-cols-2 gap-3 text-xs">
                         <div><div class="text-gray-500 mb-1">晨雾</div><div class="font-bold text-gray-800" id="prob-fog">85%</div></div>
                         <div><div class="text-gray-500 mb-1">蓝冰</div><div class="font-bold text-gray-800" id="prob-ice">90%</div></div>
@@ -202,9 +215,9 @@
                         <h2 class="font-bold text-gray-800">准备进度</h2>
                         <p class="text-xs text-gray-400 mt-1">已选 <span id="pack-checked-count">0</span> / <span id="pack-total-count">0</span></p>
                     </div>
-                    <button onclick="exportGearList()" class="bg-blue-50 text-blue-600 p-2 rounded-lg text-xl"><i class="ph ph-export"></i></button>
+                    <button onclick="exportGearList()" class="bg-blue-50 text-blue-600 p-2 rounded-lg text-xl hover:bg-blue-100 transition"><i class="ph ph-export"></i></button>
                 </div>
-                <button onclick="addCustomGear()" class="w-full py-2 border border-dashed border-gray-300 rounded-xl text-xs text-gray-500 mb-4">+ 添加自定义物品</button>
+                <button onclick="addCustomGear()" class="w-full py-2 border border-dashed border-gray-300 rounded-xl text-xs text-gray-500 mb-4 hover:bg-gray-50 transition">+ 添加自定义物品</button>
                 <div id="gear-container" class="space-y-4 pb-20"></div>
             </div>
         </section>
@@ -237,12 +250,12 @@
                 <input type="text" id="modal-name" placeholder="名称 (如: 隐藏打卡点)" class="w-full bg-gray-50 border-0 rounded-xl p-3 ring-1 ring-gray-200 outline-none">
                 <div class="flex gap-2">
                     <select id="modal-type" class="bg-gray-50 border-0 rounded-xl p-3 ring-1 ring-gray-200 outline-none flex-grow"><option value="custom">✨ 私藏</option><option value="自然">🏔️ 自然</option><option value="人文">🕌 人文</option><option value="滑雪">🎿 滑雪</option></select>
-                    <button onclick="pickLocationFromModal()" class="bg-blue-50 text-blue-600 px-3 rounded-xl text-sm font-medium border border-blue-100 whitespace-nowrap">📍 选位置</button>
+                    <button onclick="pickLocationFromModal()" class="bg-blue-50 text-blue-600 px-3 rounded-xl text-sm font-medium border border-blue-100 whitespace-nowrap hover:bg-blue-100 transition">📍 选位置</button>
                 </div>
                 <textarea id="modal-desc" placeholder="备注..." class="w-full bg-gray-50 border-0 rounded-xl p-3 ring-1 ring-gray-200 h-20 outline-none resize-none"></textarea>
                 <div class="text-xs text-gray-400 text-center" id="modal-coords-display">坐标: 未设置</div>
             </div>
-            <button onclick="saveCustomSpot()" id="save-spot-btn" class="w-full mt-5 bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-500/30">保 存</button>
+            <button onclick="saveCustomSpot()" id="save-spot-btn" class="w-full mt-5 bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition">保 存</button>
         </div>
     </div>
 
@@ -275,9 +288,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js"; 
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, query, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js"; 
         
         setLogLevel('debug'); // Enable Firestore logging
 
@@ -300,8 +312,8 @@
         
         // --- END CONFIGURATION ---
 
-        let app, db, auth, storage; 
-        let authMode = 'login'; 
+        let app, db, auth, storage; 
+        let authMode = 'login'; 
         let currentUserId = null;
         let isAuthReady = false;
 
@@ -310,8 +322,24 @@
         window.handleAuthAction = handleAuthAction;
         window.handleSignOut = handleSignOut;
         window.saveUserData = saveUserData;
-        window.loadUserData = loadUserData;
-        window.uploadImageAndGetUrl = uploadImageAndGetUrl; 
+        window.uploadImageAndGetUrl = uploadImageAndGetUrl; 
+        
+        // Global utility to force all rendering functions to re-run after data load/sync
+        window.renderApp = () => {
+            if (!window.state.initialized || !window.state.dataLoaded) {
+                 document.getElementById('loading-state').classList.remove('hidden');
+                 return;
+            }
+            document.getElementById('loading-state').classList.add('hidden');
+            
+            // Re-render all major components
+            window.renderExploreGrid();
+            window.renderDayList();
+            window.renderAllSpots();
+            window.renderBudget();
+            window.renderGear();
+            window.updateDashboard(); 
+        }
 
         function getUsernameFromEmail(email) {
             if (!email) return 'N/A';
@@ -336,8 +364,6 @@
                 infoDiv.classList.remove('hidden');
                 formDiv.classList.add('hidden');
                 
-                loadUserData();
-
             } else {
                 currentUserId = null;
                 statusEl.textContent = '登录/注册';
@@ -353,14 +379,16 @@
             try {
                 if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
                     console.error("Firebase configuration is incomplete. Data synchronization will be disabled.");
-                    window.state.initialized = true; 
+                    window.state.initialized = true; 
+                    window.state.dataLoaded = true;
+                    window.renderApp();
                     return;
                 }
                 
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
-                storage = getStorage(app); 
+                storage = getStorage(app); 
 
                 await setPersistence(auth, browserLocalPersistence);
 
@@ -371,18 +399,62 @@
                 onAuthStateChanged(auth, (user) => {
                     isAuthReady = true;
                     updateAuthStateUI(user);
-                    if (!window.state.initialized) {
-                       window.renderExploreGrid(); window.renderDayList(); window.renderAllSpots(); window.renderBudget(); window.renderGear(); window.initCharts();
+                    
+                    if (user) {
+                        setupDataListener(user.uid); // Start real-time sync
+                    } else if (!window.state.initialized) {
+                        // If not logged in and not initialized, render with defaults
+                        window.state.initialized = true;
+                        window.state.dataLoaded = true;
+                        window.renderApp(); 
                     }
                 });
 
             } catch (error) {
                 console.error("Firebase initialization failed:", error);
+                window.state.initialized = true;
+                window.state.dataLoaded = true;
+                window.renderApp();
             }
         }
         
+        // --- REALTIME SYNC: onSnapshot ---
+        function setupDataListener(userId) {
+            const docRef = doc(db, 'artifacts', appId, 'users', userId, 'data', 'state');
+            onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    // Load and parse data
+                    const data = docSnap.data();
+                    // Load custom spots and combine with default spots
+                    window.state.spots = [...window.defaultSpots, ...(data.spots || [])]; 
+                    // Parse itinerary string back to array
+                    try {
+                        window.state.itinerary = JSON.parse(data.itinerary);
+                    } catch {
+                        window.state.itinerary = [[]]; // Fallback if parsing fails
+                    }
+                    window.state.customBudget = data.customBudget || [];
+                    window.state.customGear = data.customGear || [];
+                } else {
+                    // Document doesn't exist, create it with defaults
+                    saveUserData(); // This will auto-sync back via onSnapshot
+                }
+
+                if (!window.state.initialized) {
+                    window.state.initialized = true;
+                }
+                window.state.dataLoaded = true;
+                window.renderApp(); // Global re-render trigger
+                console.log("Firestore Data Synced and App Rendered.");
+            }, (error) => {
+                console.error("Firestore Listener Error:", error);
+                window.state.dataLoaded = true; 
+                window.renderApp();
+            });
+        }
+        
         async function uploadImageAndGetUrl(base64Data, userId) {
-            if (!storage || !base64Data) return null;
+            if (!storage || !base64Data || !userId) return null;
             
             // Use the AUTH UID as the directory name
             const path = `images/${userId}/${Date.now()}.jpeg`;
@@ -400,14 +472,17 @@
 
         async function saveUserData() {
             if (!currentUserId || !isAuthReady || !db) {
+                // If not logged in, data is saved locally by debounceSave only (which is fine)
                 return;
             }
 
             try {
                 const docRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'data', 'state');
                 const dataToSave = {
-                    spots: window.state.spots.filter(s => s.id > 1000), 
-                    itinerary: JSON.stringify(window.state.itinerary), 
+                    // Only save custom spots (id > 1000)
+                    spots: window.state.spots.filter(s => s.id > 1000), 
+                    // Stringify itinerary (to comply with array-in-array Firestore limitations if any)
+                    itinerary: JSON.stringify(window.state.itinerary), 
                     customBudget: window.state.customBudget,
                     customGear: window.state.customGear,
                     lastSave: new Date().toISOString()
@@ -416,36 +491,7 @@
                 await setDoc(docRef, dataToSave, { merge: true });
                 
             } catch (e) {
-                console.error("Error saving document: ", e);
-            }
-        }
-
-        async function loadUserData() {
-            if (!currentUserId || !isAuthReady || !db) return;
-
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'data', 'state');
-                const docSnap = await getDoc(docRef);
-
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    
-                    window.state.spots = [...window.defaultSpots, ...data.spots];
-                    window.state.itinerary = JSON.parse(data.itinerary); 
-                    window.state.customBudget = data.customBudget || [];
-                    window.state.customGear = data.customGear || [];
-                    
-                    window.renderExploreGrid(); window.renderDayList(); window.renderAllSpots(); window.renderBudget(); window.renderGear();
-                    window.updateCharts(); window.updateDashboard();
-                    
-                } else {
-                    // console.log("No saved data found. Using defaults.");
-                }
-
-                window.state.initialized = true;
-
-            } catch (e) {
-                console.error("Error loading document: ", e);
+                console.error("Error writing document: ", e);
             }
         }
 
@@ -454,6 +500,10 @@
             document.getElementById('auth-modal').classList.remove('hidden');
         }
         
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
         function toggleAuthMode() {
             const title = document.getElementById('auth-title');
             const submitBtn = document.getElementById('auth-submit-btn');
@@ -494,14 +544,14 @@
                 return;
             }
 
-            // Construct Firebase-compatible email 
+            // Construct Firebase-compatible email 
             const email = `${username}@${firebaseConfig.authDomain.split('.').slice(0, -2).join('.')}.canvas.local`;
 
             try {
                 if (authMode === 'register') {
                     await createUserWithEmailAndPassword(auth, email, password);
-                    alert(`账户 ${username} 注册成功！`);
-                    saveUserData();
+                    // Use console.log for success instead of alert
+                    console.log(`账户 ${username} 注册成功！`); 
                 } else {
                     await signInWithEmailAndPassword(auth, email, password);
                 }
@@ -512,7 +562,6 @@
                 let errorMessage = '认证失败。';
                 if (error.code === 'auth/email-already-in-use') errorMessage = '该账户名已被注册。';
                 if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') errorMessage = '账户名或密码错误。';
-                // Add specific deployment hint for cross-domain issues
                 if (error.code === 'auth/unauthorized-domain') {
                     errorMessage += ' 部署失败。请检查：您是否已将当前域名添加到 Firebase 控制台的 [Authentication -> Settings -> Authorized domains] 列表中?';
                 }
@@ -524,9 +573,10 @@
         async function handleSignOut() {
             try {
                 await signOut(auth);
-                alert("您已退出登录。");
+                console.log("您已退出登录。"); // Removed alert
                 document.getElementById('auth-modal').classList.add('hidden');
-                window.location.reload(); 
+                // Reload to reset local state to default, which will then use dataLoaded=true to render defaults
+                window.location.reload(); 
             } catch (error) {
                 console.error("Sign Out Error:", error);
             }
@@ -556,7 +606,8 @@
             spots: [...defaultSpots], itinerary: [[]], currentDayIndex: 0,
             customBudget: [], customGear: [], weatherTemp: -20,
             isPickingMode: false, mapScale: 1, mapOffset: {x:0,y:0}, isDragging: false, startDrag: {x:0,y:0}, tempSpotData: null,
-            initialized: false
+            initialized: false, // Initialized Firebase/Auth
+            dataLoaded: false // Data successfully loaded from Firestore or defaulted
         };
         
         let saveTimeout;
@@ -569,13 +620,23 @@
 
         // Global Chart Variables
         let budgetChart, polarChart, packChart;
-        let currentModalImageBase64 = null; 
+        let currentModalImageBase64 = null; 
+        
+        // --- Modal Control ---
+        window.closeModal = (id) => {
+            document.getElementById(id).classList.add('hidden');
+        }
 
         // --- 1. Map Engine ---
         function initMapEvents() {
             const w = document.getElementById('map-wrapper');
             w.addEventListener('wheel', e => { e.preventDefault(); zoomMap(e.deltaY>0?0.9:1.1); });
-            w.addEventListener('mousedown', e => { state.isDragging=true; state.startDrag={x:e.clientX,y:e.clientY}; w.style.cursor='grabbing'; if(state.isPickingMode) handleMapClick(e.clientX, e.clientY, w); });
+            w.addEventListener('mousedown', e => { 
+                state.isDragging=true; 
+                state.startDrag={x:e.clientX,y:e.clientY}; 
+                w.style.cursor='grabbing'; 
+                if(state.isPickingMode) handleMapClick(e.clientX, e.clientY, w); 
+            });
             window.addEventListener('mousemove', e => { if(state.isDragging) handleDrag(e.clientX, e.clientY); handleMapHover(e); });
             window.addEventListener('mouseup', () => { state.isDragging=false; w.style.cursor=state.isPickingMode?'crosshair':'grab'; });
             w.addEventListener('touchstart', e => { if(e.touches.length === 1) { state.isDragging=true; state.startDrag={x:e.touches[0].clientX, y:e.touches[0].clientY}; } }, {passive: false});
@@ -588,94 +649,191 @@
             state.startDrag = {x:cx, y:cy};
             renderMap();
         }
-        function zoomMap(delta) { const ns=state.mapScale+delta; if(ns>0.2 && ns<5) { state.mapScale=ns; renderMap(); } }
+        function zoomMap(factor) { 
+            const ns = state.mapScale * factor; 
+            if(ns > 0.2 && ns < 5) { 
+                state.mapScale = ns; 
+                renderMap(); 
+            } 
+        }
         function resetMapView() { state.mapScale=1; state.mapOffset={x:0,y:0}; renderMap(); }
+        
         function renderMap() {
             const cvs=document.getElementById('route-canvas'), ctx=cvs.getContext('2d'), w=document.getElementById('map-wrapper');
             cvs.width=w.offsetWidth; cvs.height=w.offsetHeight; ctx.clearRect(0,0,cvs.width,cvs.height);
-            ctx.save(); ctx.translate(cvs.width/2+state.mapOffset.x, cvs.height/2+state.mapOffset.y); ctx.scale(state.mapScale,state.mapScale); ctx.translate(-cvs.width/2,-cvs.height/2);
+            // Translate/Scale/Zoom setup
+            ctx.save(); 
+            ctx.translate(cvs.width/2 + state.mapOffset.x, cvs.height/2 + state.mapOffset.y); 
+            ctx.scale(state.mapScale, state.mapScale); 
+            ctx.translate(-cvs.width/2, -cvs.height/2);
+            
             const vs=1000, stX=(cvs.width-vs)/2, stY=(cvs.height-vs)/2;
+            
+            // Draw routes
             state.itinerary.forEach((dS,di)=>{
-                if(dS.length<2)return; ctx.beginPath(); ctx.strokeStyle=di===state.currentDayIndex?'#2563EB':'#CBD5E1'; ctx.lineWidth=di===state.currentDayIndex?4/state.mapScale:2/state.mapScale; ctx.setLineDash(di===state.currentDayIndex?[]:[5,5]);
-                dS.forEach((id,idx)=>{const s=state.spots.find(sp=>sp.id===id); if(s) idx===0?ctx.moveTo(stX+s.x,stY+s.y):ctx.lineTo(stX+s.x,stY+s.y);}); ctx.stroke();
+                if(dS.length<2)return; 
+                ctx.beginPath(); 
+                ctx.strokeStyle = di === state.currentDayIndex ? '#2563EB' : '#CBD5E1'; 
+                ctx.lineWidth = di === state.currentDayIndex ? 4 / state.mapScale : 2 / state.mapScale; 
+                ctx.setLineDash(di === state.currentDayIndex ? [] : [5/state.mapScale, 5/state.mapScale]);
+                dS.forEach((id,idx)=>{const s=state.spots.find(sp=>sp.id===id); if(s) idx===0?ctx.moveTo(stX+s.x,stY+s.y):ctx.lineTo(stX+s.x,stY+s.y);}); 
+                ctx.stroke();
             });
+            
+            // Draw spots
             state.spots.forEach(s=>{
                 const cx=stX+s.x, cy=stY+s.y, act=state.itinerary[state.currentDayIndex].includes(s.id);
-                ctx.beginPath(); ctx.arc(cx,cy,(act?8:5)/Math.sqrt(state.mapScale),0,Math.PI*2); ctx.fillStyle=act?'#2563EB':'#94A3B8'; ctx.fill();
-                if(act || state.mapScale > 1.5) { ctx.fillStyle='#334155'; ctx.font=`${12/state.mapScale}px sans-serif`; ctx.fillText(s.name,cx+10,cy); }
+                ctx.beginPath(); 
+                ctx.arc(cx, cy, (act ? 8 : 5) / Math.sqrt(state.mapScale), 0, Math.PI*2); 
+                ctx.fillStyle = act ? '#2563EB' : '#94A3B8'; 
+                ctx.fill();
+                if(act || state.mapScale > 1.5) { 
+                    ctx.fillStyle='#334155'; 
+                    ctx.font=`${12/state.mapScale}px sans-serif`; 
+                    ctx.fillText(s.name, cx + 10 / state.mapScale, cy + 4 / state.mapScale); 
+                }
             });
             ctx.restore();
         }
+        
         function handleMapClick(cx, cy, w){
             const rect=w.getBoundingClientRect();
             const vs=1000, stX=(w.offsetWidth-vs)/2, stY=(w.offsetHeight-vs)/2;
             const mx=cx-rect.left, my=cy-rect.top;
             const vx=(mx-w.offsetWidth/2-state.mapOffset.x)/state.mapScale+w.offsetWidth/2-stX;
             const vy=(my-w.offsetHeight/2-state.mapOffset.y)/state.mapScale+w.offsetHeight/2-stY;
-            if(!state.tempSpotData)state.tempSpotData={}; state.tempSpotData.x=vx; state.tempSpotData.y=vy;
-            state.isPickingMode=false; window.openAttractionModal(false);
+            
+            if(!state.tempSpotData) state.tempSpotData={}; 
+            state.tempSpotData.x=vx; 
+            state.tempSpotData.y=vy;
+            
+            state.isPickingMode=false; 
+            document.getElementById('map-wrapper').style.cursor = 'grab';
+            window.openAttractionModal(false); // Open modal to finish adding spot
         }
+        
         function handleMapHover(e) {
-            const tip=document.getElementById('map-tooltip'); if(state.isPickingMode||state.isDragging){tip.classList.add('hidden');return;}
+            const tip=document.getElementById('map-tooltip'); 
+            if(state.isPickingMode || state.isDragging){ tip.classList.add('hidden'); return; }
+            
             const w=document.getElementById('map-wrapper'), rect=w.getBoundingClientRect();
             const mx=e.clientX-rect.left, my=e.clientY-rect.top;
             const cx=w.offsetWidth/2+state.mapOffset.x, cy=w.offsetHeight/2+state.mapOffset.y;
             const stX=(w.offsetWidth-1000)/2, stY=(w.offsetHeight-1000)/2;
+            
             const h=state.spots.find(s=>{
-                const sx=cx+(stX+s.x-w.offsetWidth/2)*state.mapScale, sy=cy+(stY+s.y-w.offsetHeight/2)*state.mapScale;
-                return Math.abs(sx-mx)<10 && Math.abs(sy-my)<10;
+                // Calculate scaled/translated spot coordinates on screen
+                const sx=cx+(stX+s.x-w.offsetWidth/2)*state.mapScale, 
+                      sy=cy+(stY+s.y-w.offsetHeight/2)*state.mapScale;
+                // Check if mouse is near the spot (adjusting for scale)
+                const hitRadius = 10 / Math.sqrt(state.mapScale);
+                return Math.abs(sx - mx) < hitRadius && Math.abs(sy - my) < hitRadius;
             });
-            if(h){ tip.style.left=(mx+15)+'px'; tip.style.top=my+'px'; tip.innerText=h.name; tip.classList.remove('hidden'); } else tip.classList.add('hidden');
+            
+            if(h){ 
+                tip.style.left=(mx+15)+'px'; 
+                tip.style.top=my+'px'; 
+                tip.innerText=h.name; 
+                tip.classList.remove('hidden'); 
+            } else {
+                tip.classList.add('hidden');
+            }
         }
 
         // --- 2. Explore & Route Logic ---
         window.renderExploreGrid = () => {
-            const g=document.getElementById('explore-grid'), t=document.getElementById('explore-search').value.toLowerCase(), f=document.getElementById('explore-filter').value; g.innerHTML='';
+            const g=document.getElementById('explore-grid'), 
+                  t=document.getElementById('explore-search').value.toLowerCase(), 
+                  f=document.getElementById('explore-filter').value; 
+            g.innerHTML='';
+            
             state.spots.forEach(s=>{
                 if((s.name.toLowerCase().includes(t)||s.tags.join('').includes(t))&&(f==='all'||(f==='custom'?s.id>1000:s.type===f))){
-                    const div=document.createElement('div'); div.className="bg-white rounded-xl shadow-sm p-3 border border-gray-100 flex flex-col justify-between";
+                    const div=document.createElement('div'); 
+                    div.className="bg-white rounded-xl shadow-sm p-3 border border-gray-100 flex flex-col justify-between";
                     
-                    let imageHtml = s.img && s.img.startsWith('http') ? 
-                        `<img src="${s.img}" onerror="this.onerror=null;this.src='https://placehold.co/100x100/A0AEC0/ffffff?text=Image+Load+Fail';" class="w-full h-24 object-cover rounded-lg mb-2">` : 
+                    let imageHtml = s.img && s.img.startsWith('http') ? 
+                        `<img src="${s.img}" onerror="this.onerror=null;this.src='https://placehold.co/100x100/A0AEC0/ffffff?text=Image+Load+Fail';" class="w-full h-24 object-cover rounded-lg mb-2">` : 
                         `<div class="w-full h-24 bg-gray-100 flex items-center justify-center text-gray-400 rounded-lg mb-2"><i class="ph ph-map-pin"></i></div>`;
 
                     div.innerHTML=`
                         ${imageHtml}
-                        <div><div class="flex justify-between"><h3 class="font-bold text-gray-800">${s.name}</h3><span class="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">${s.type}</span></div><p class="text-xs text-gray-400 mt-1">${s.desc||''}</p></div><button onclick="addToRoute(${s.id})" class="mt-3 w-full bg-blue-50 text-blue-600 text-xs py-2 rounded font-medium">加入行程</button>`;
+                        <div><div class="flex justify-between"><h3 class="font-bold text-gray-800">${s.name}</h3><span class="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">${s.type}</span></div><p class="text-xs text-gray-400 mt-1">${s.desc||''}</p></div><button onclick="addToRoute(${s.id})" class="mt-3 w-full bg-blue-50 text-blue-600 text-xs py-2 rounded font-medium hover:bg-blue-100 transition">加入行程</button>`;
                     g.appendChild(div);
                 }
             });
+            updateDashboard();
         }
-        function addToRoute(id){ state.itinerary[state.currentDayIndex].push(id); renderDayList(); debounceSave(); }
+        
+        function addToRoute(id){ 
+            if (!state.itinerary[state.currentDayIndex]) {
+                state.itinerary.push([]);
+            }
+            state.itinerary[state.currentDayIndex].push(id); 
+            renderDayList(); 
+            debounceSave(); 
+        }
         
         window.renderDayList = () => {
-            const l=document.getElementById('day-list'); l.innerHTML=''; document.getElementById('budget-days').value=state.itinerary.length; renderBudget();
+            const l=document.getElementById('day-list'); 
+            l.innerHTML=''; 
+            
+            // Ensure itinerary has at least one day
+            if (state.itinerary.length === 0) {
+                state.itinerary.push([]);
+                state.currentDayIndex = 0;
+            }
+
+            document.getElementById('budget-days').value=state.itinerary.length; 
+            
             state.itinerary.forEach((s,i)=>{
-                const div=document.createElement('div'); div.className=`flex-shrink-0 lg:flex-shrink w-20 lg:w-full p-2 lg:p-3 rounded-xl border border-gray-100 cursor-pointer text-center lg:text-left transition-all ${i===state.currentDayIndex?'bg-blue-50 border-blue-200 text-blue-700':'hover:bg-gray-50 text-gray-500'}`;
+                const div=document.createElement('div'); 
+                div.className=`flex-shrink-0 lg:flex-shrink w-20 lg:w-full p-2 lg:p-3 rounded-xl border border-gray-100 cursor-pointer text-center lg:text-left transition-all ${i===state.currentDayIndex?'bg-blue-50 border-blue-200 text-blue-700':'hover:bg-gray-50 text-gray-500'}`;
                 div.innerHTML=`<div class="font-bold text-xs">D${i+1}</div><div class="text-[10px] opacity-70">${s.length}点</div>`;
-                div.onclick=()=>{state.currentDayIndex=i;renderDayList();}; l.appendChild(div);
+                div.onclick=()=>{state.currentDayIndex=i;renderDayList();}; 
+                l.appendChild(div);
             });
+            
             document.getElementById('current-day-num').innerText=state.currentDayIndex+1;
             document.getElementById('day-spot-count').innerText=state.itinerary[state.currentDayIndex].length;
-            renderDaySpots(); renderMap();
+            renderDaySpots(); 
+            renderMap();
         }
-        function addDay(){ state.itinerary.push([]); state.currentDayIndex=state.itinerary.length-1; renderDayList(); debounceSave(); }
+        
+        function addDay(){ 
+            state.itinerary.push([]); 
+            state.currentDayIndex=state.itinerary.length-1; 
+            renderDayList(); 
+            debounceSave(); 
+        }
         
         function renderDaySpots() {
-            const desktopL=document.getElementById('day-spots-list-desktop'), mobileL=document.getElementById('day-spots-list-mobile');
+            const desktopL=document.getElementById('day-spots-list-desktop'), 
+                  mobileL=document.getElementById('day-spots-list-mobile');
             const html = state.itinerary[state.currentDayIndex].map((id,i)=>{
-                const s=state.spots.find(sp=>sp.id===id); if(!s)return'';
-                return `<div class="flex justify-between items-center p-2 bg-gray-50 rounded"><span class="truncate">${i+1}. ${s.name}</span><button onclick="rmSpot(${i})" class="text-red-400 px-2">×</button></div>`;
+                const s=state.spots.find(sp=>sp.id===id); 
+                if(!s)return'';
+                return `<div class="flex justify-between items-center p-2 bg-gray-50 rounded"><span class="truncate">${i+1}. ${s.name}</span><button onclick="rmSpot(${i})" class="text-red-400 px-2 hover:text-red-600">×</button></div>`;
             }).join('');
-            desktopL.innerHTML=html; mobileL.innerHTML=html;
+            desktopL.innerHTML=html; 
+            mobileL.innerHTML=html;
         }
-        function rmSpot(i){state.itinerary[state.currentDayIndex].splice(i,1); renderDayList(); debounceSave();}
+        
+        function rmSpot(i){
+            state.itinerary[state.currentDayIndex].splice(i,1); 
+            renderDayList(); 
+            debounceSave();
+        }
         
         window.renderAllSpots = () => {
-            const l=document.getElementById('all-spots-list'), t=document.getElementById('spot-search').value; l.innerHTML='';
-            state.spots.filter(s=>s.name.includes(t)).forEach(s=>{
-                const b=document.createElement('button'); b.className="w-full text-left p-2 hover:bg-gray-50 text-xs text-gray-600 flex justify-between";
-                b.innerHTML=`<span>${s.name}</span><span>+</span>`; b.onclick=()=>{state.itinerary[state.currentDayIndex].push(s.id);renderDayList();debounceSave();}; l.appendChild(b);
+            const l=document.getElementById('all-spots-list'), t=document.getElementById('spot-search').value.toLowerCase(); 
+            l.innerHTML='';
+            state.spots.filter(s=>s.name.toLowerCase().includes(t)).forEach(s=>{
+                const b=document.createElement('button'); 
+                b.className="w-full text-left p-2 hover:bg-gray-50 text-xs text-gray-600 flex justify-between rounded transition";
+                b.innerHTML=`<span>${s.name}</span><span class="text-blue-500 font-bold">+</span>`; 
+                b.onclick=()=>{addToRoute(s.id)}; 
+                l.appendChild(b);
             });
         }
         
@@ -692,122 +850,266 @@
         }
         
         window.openAttractionModal = (reset = true) => {
-            document.getElementById('attraction-modal').classList.remove('hidden'); 
+            document.getElementById('attraction-modal').classList.remove('hidden'); 
             if(reset){
-                document.getElementById('modal-name').value=''; state.tempSpotData=null; 
+                document.getElementById('modal-name').value=''; state.tempSpotData=null; 
                 document.getElementById('modal-desc').value='';
-                document.getElementById('modal-coords-display').innerText='未设置';
+                document.getElementById('modal-coords-display').innerText='坐标: 未设置';
                 currentModalImageBase64 = null;
                 document.getElementById('modal-img-input').value = '';
                 document.getElementById('modal-img-preview').innerHTML = `<i class="ph ph-image text-2xl mb-1"></i><span class="text-xs">点击添加封面图片 (可选)</span>`;
 
             } else if(state.tempSpotData?.x) {
-                 document.getElementById('modal-coords-display').innerText=`X:${Math.round(state.tempSpotData.x)}, Y:${Math.round(state.tempSpotData.y)}`;
+                document.getElementById('modal-coords-display').innerText=`坐标: X:${Math.round(state.tempSpotData.x)}, Y:${Math.round(state.tempSpotData.y)}`;
             }
         }
+        
         function pickLocationFromModal(){
-            state.tempSpotData={name:document.getElementById('modal-name').value}; state.isPickingMode=true; 
-            document.getElementById('attraction-modal').classList.add('hidden'); switchTab('routes'); 
-            alert("请点击地图进行定位");
+            state.tempSpotData={name:document.getElementById('modal-name').value}; 
+            state.isPickingMode=true; 
+            document.getElementById('attraction-modal').classList.add('hidden'); 
+            switchTab('routes'); 
+            document.getElementById('map-wrapper').style.cursor = 'crosshair';
+            console.log("地点选取模式已开启，请点击地图上的位置。"); // Replaced alert
         }
         
         async function saveCustomSpot(){
-            const n=document.getElementById('modal-name').value; 
-            if(!n) return;
+            const nameInput = document.getElementById('modal-name');
+            const n=nameInput.value;
+            
+            // --- FIX: Replace blocking alert with visual feedback and console error ---
+            if(!n) {
+                nameInput.classList.add('ring-red-500', 'ring-2'); // Visual feedback
+                setTimeout(() => nameInput.classList.remove('ring-red-500', 'ring-2'), 1000);
+                console.error("保存失败: 请输入地点名称。"); // Console error
+                return;
+            }
 
             let imageUrl = null;
             if (currentModalImageBase64 && window.uploadImageAndGetUrl) {
                 if (!window.currentUserId) {
                     alert("请先登录账户 (或注册) 才能上传图片并保存自定义景点。");
-                    return; 
+                    return; 
                 }
 
                 const saveBtn = document.getElementById('save-spot-btn');
                 saveBtn.innerHTML = '<i class="ph ph-spinner-gap animate-spin"></i> 上传中...';
                 saveBtn.disabled = true;
 
-                const userId = window.currentUserId; 
-                
+                const userId = window.currentUserId; 
                 imageUrl = await window.uploadImageAndGetUrl(currentModalImageBase64, userId);
                 
                 saveBtn.innerHTML = '保 存';
                 saveBtn.disabled = false;
 
-
+                // --- FIX: Replace blocking alert with console error ---
                 if (!imageUrl) {
-                    alert("图片上传失败，请检查 Firebase Storage 配置和安全规则。");
+                    console.error("图片上传失败，请检查 Firebase Storage 配置和安全规则。");
                     return;
                 }
             }
 
             state.spots.push({
-                id:Date.now(), name:n, type:document.getElementById('modal-type').value, desc:document.getElementById('modal-desc').value, x:state.tempSpotData?.x||500, y:state.tempSpotData?.y||500, tags:[],
+                id:Date.now(), 
+                name:n, 
+                type:document.getElementById('modal-type').value, 
+                desc:document.getElementById('modal-desc').value, 
+                x:state.tempSpotData?.x||500, 
+                y:state.tempSpotData?.y||500, 
+                tags:[],
                 img: imageUrl
             });
             
             currentModalImageBase64 = null;
-            renderExploreGrid(); renderAllSpots(); renderMap(); document.getElementById('attraction-modal').classList.add('hidden'); debounceSave();
+            renderExploreGrid(); 
+            renderAllSpots(); 
+            renderMap(); 
+            document.getElementById('attraction-modal').classList.add('hidden'); 
+            debounceSave();
         }
         
         // --- 3. Budget & Gear ---
+        window.addCustomBudgetItem = () => {
+            const itemName = document.getElementById('custom-item-name').value.trim();
+            const itemPrice = parseFloat(document.getElementById('custom-item-price').value);
+
+            if (itemName && itemPrice && itemPrice > 0) {
+                window.state.customBudget.push({
+                    name: itemName,
+                    price: itemPrice
+                });
+                document.getElementById('custom-item-name').value = '';
+                document.getElementById('custom-item-price').value = '';
+                updateDashboard(); // Triggers renderBudget/save
+            } else {
+                console.error("请输入有效的项目名称和价格。");
+            }
+        }
+        
         window.renderBudget = () => {
-            const p=parseInt(document.getElementById('budget-people').value)||1, d=parseInt(document.getElementById('budget-days').value)||1;
-            const stay=parseFloat(document.getElementById('price-stay').value)||0, trans=parseFloat(document.getElementById('price-trans').value)||0;
-            const food=parseFloat(document.getElementById('price-food').value)||0, ticket=parseFloat(document.getElementById('price-ticket').value)||0;
-            const tStay=(stay*Math.ceil(p/2))*(d-1), tTrans=trans*d, tMisc=(food*p*d)+(ticket*p);
+            const p=parseInt(document.getElementById('budget-people').value)||1, 
+                  d=parseInt(document.getElementById('budget-days').value)||1;
+            const stay=parseFloat(document.getElementById('price-stay').value)||0, 
+                  trans=parseFloat(document.getElementById('price-trans').value)||0;
+            const food=parseFloat(document.getElementById('price-food').value)||0, 
+                  ticket=parseFloat(document.getElementById('price-ticket').value)||0;
+                  
+            const tStay=(stay*Math.ceil(p/2))*(d-1), 
+                  tTrans=trans*d, 
+                  tMisc=(food*p*d)+(ticket*p);
             
-            let listHtml=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🏨 住宿</span><span class="font-mono font-bold">¥<span id="disp-stay">${tStay}</span></span></div>`;
-            listHtml+=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🚗 交通</span><span class="font-mono font-bold">¥<span id="disp-trans">${tTrans}</span></span></div>`;
-            listHtml+=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🥘 食/票</span><span class="font-mono font-bold">¥<span id="disp-misc">${tMisc}</span></span></div>`;
+            let listHtml=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🏨 住宿 (${stay} x ${d-1} 晚)</span><span class="font-mono font-bold">¥<span id="disp-stay">${tStay}</span></span></div>`;
+            listHtml+=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🚗 交通 (${trans} x ${d} 天)</span><span class="font-mono font-bold">¥<span id="disp-trans">${tTrans}</span></span></div>`;
+            listHtml+=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🥘 食/票 (${p} 人)</span><span class="font-mono font-bold">¥<span id="disp-misc">${tMisc}</span></span></div>`;
             
             let tCustom=0;
-            state.customBudget.forEach((i,x)=>{ tCustom+=i.price; listHtml+=`<div class="flex justify-between items-center p-2 bg-orange-500/20 rounded-lg border border-orange-500/30 text-orange-100 budget-item-enter relative group"><span>${i.name}</span><div class="flex items-center gap-2"><span class="font-mono font-bold">¥${i.price}</span><button onclick="removeBudgetItem(${x})" class="text-white/70"><i class="ph ph-trash"></i></button></div></div>`; });
+            state.customBudget.forEach((i,x)=>{ 
+                tCustom+=i.price; 
+                listHtml+=`<div class="flex justify-between items-center p-2 bg-orange-500/20 rounded-lg border border-orange-500/30 text-orange-100 budget-item-enter relative group"><span>✨ ${i.name}</span><div class="flex items-center gap-2"><span class="font-mono font-bold">¥${i.price.toLocaleString()}</span><button onclick="removeBudgetItem(${x})" class="text-white/70 hover:text-white transition"><i class="ph ph-trash"></i></button></div></div>`; 
+            });
             listHtml+=`<span id="disp-custom" style="display:none">${tCustom}</span>`;
 
             document.getElementById('budget-summary-list').innerHTML=listHtml;
             const total=tStay+tTrans+tMisc+tCustom;
             document.getElementById('disp-total').innerText=total.toLocaleString();
             document.getElementById('disp-avg').innerText=Math.round(total/p).toLocaleString();
-            debounceSave();
+            
+            debounceSave(); // Save after recalculation
         }
-        function removeBudgetItem(i){state.customBudget.splice(i,1); renderBudget();}
+        
+        function removeBudgetItem(i){
+            state.customBudget.splice(i,1); 
+            updateDashboard(); // Triggers renderBudget/save
+        }
         
         window.renderGear = () => {
-            const c=document.getElementById('gear-container'); c.innerHTML='';
-            let cats={...defaultGear}; if(state.customGear.length) cats["自定义"]=state.customGear;
-            for(const [k,v] of Object.entries(cats)){c.innerHTML+=`<div><h4 class="font-bold text-gray-700 text-sm mb-2 border-l-4 border-blue-500 pl-2">${k}</h4><div class="space-y-2">${v.map(i=>`<label class="flex items-center space-x-2 text-xs text-gray-500"><input type="checkbox" class="rounded text-blue-600 w-4 h-4 gear-check" data-item="${i}" onchange="updateGearStats();debounceSave();"><span>${i}</span></label>`).join('')}</div></div>`;}
+            const c=document.getElementById('gear-container'); 
+            c.innerHTML='';
+            
+            let cats={...defaultGear}; 
+            if(state.customGear.length) {
+                 // Convert customGear array to an object property
+                 cats["自定义物品"] = state.customGear;
+            }
+            
+            for(const [k,v] of Object.entries(cats)){
+                let itemsHtml = '';
+                // Handle both simple string arrays (defaultGear) and objects (customGear, if saved with old format)
+                const items = Array.isArray(v) ? v : Object.values(v); 
+
+                items.forEach(i => {
+                    // Check local state for checked items (simulating persistent check state)
+                    const isChecked = localStorage.getItem(`gear_${i}`) === 'true';
+                    itemsHtml += `<label class="flex items-center space-x-2 text-xs text-gray-500 hover:bg-gray-50 p-1 rounded transition cursor-pointer"><input type="checkbox" class="rounded text-blue-600 w-4 h-4 gear-check" data-item="${i}" ${isChecked ? 'checked' : ''} onchange="updateGearStats(this); debounceSave();"><span>${i}</span></label>`;
+                });
+
+                c.innerHTML+=`<div><h4 class="font-bold text-gray-700 text-sm mb-2 border-l-4 border-blue-500 pl-2">${k}</h4><div class="space-y-2">${itemsHtml}</div></div>`;
+            }
             updateGearStats();
         }
-        function updateGearStats(){
-            const t=document.querySelectorAll('.gear-check').length, c=document.querySelectorAll('.gear-check:checked').length;
-            document.getElementById('pack-checked-count').innerText=c; document.getElementById('pack-total-count').innerText=t;
-            document.getElementById('pack-percent-text').innerText=(t?Math.round(c/t*100):0)+'%';
+        
+        // This function handles checkbox state and updates stats
+        function updateGearStats(checkbox = null){
+            if (checkbox) {
+                // Save/update state in localStorage when a checkbox changes
+                localStorage.setItem(`gear_${checkbox.dataset.item}`, checkbox.checked);
+            }
+            
+            const checks = document.querySelectorAll('.gear-check');
+            const t = checks.length;
+            const c = Array.from(checks).filter(ch => ch.checked).length;
+            
+            document.getElementById('pack-checked-count').innerText=c; 
+            document.getElementById('pack-total-count').innerText=t;
+            
+            const percent = (t ? Math.round(c/t*100) : 0);
+            document.getElementById('pack-percent-text').innerText=percent + '%';
+            
+            // Update Dashboard and Charts
             if(packChart){packChart.data.datasets[0].data=[c,t-c]; packChart.update();}
+            document.getElementById('dash-pack').innerText = percent;
         }
-        function addCustomGear(){const n=prompt("名称"); if(n){state.customGear.push(n); renderGear();debounceSave();}}
+        
+        window.addCustomGear = () => {
+            const n = window.prompt("请输入新的装备名称:"); 
+            if (n && n.trim()) {
+                window.state.customGear.push(n.trim()); 
+                window.renderGear(); // Renders the gear list (which includes the new item)
+                debounceSave();
+            }
+        }
+        
+        // Export logic (placeholder)
+        window.exportGearList = () => {
+            console.log("Exporting gear list...");
+            // FIX: Removed alert
+            console.log("清单已准备好导出！(功能待实现)");
+        }
 
         // --- 4. Utility ---
         window.updateCharts = () => {
-            const s=parseInt(document.getElementById('disp-stay').innerText.replace(/,/g,'')), tr=parseInt(document.getElementById('disp-trans').innerText.replace(/,/g,'')), m=parseInt(document.getElementById('disp-misc').innerText.replace(/,/g,'')), c=parseInt(document.getElementById('disp-custom').innerText.replace(/,/g,''));
-            budgetChart.data.datasets[0].data=[s,tr,m,c]; budgetChart.update();
-            const ids=state.itinerary.flat(), sp=ids.map(id=>state.spots.find(s=>s.id===id)).filter(s=>s);
-            polarChart.data.datasets[0].data=[sp.filter(s=>s.type==='自然').length,sp.filter(s=>s.type==='人文').length,sp.filter(s=>s.type==='滑雪').length,sp.filter(s=>s.type==='custom').length]; polarChart.update();
+            // Get calculated totals from the Budget tab
+            const s=parseInt(document.getElementById('disp-stay').innerText.replace(/,/g,'') || 0), 
+                  tr=parseInt(document.getElementById('disp-trans').innerText.replace(/,/g,'') || 0), 
+                  m=parseInt(document.getElementById('disp-misc').innerText.replace(/,/g,'') || 0), 
+                  c=parseInt(document.getElementById('disp-custom').innerText.replace(/,/g,'') || 0);
+
+            // Budget Doughnut Chart
+            if (budgetChart) {
+                budgetChart.data.datasets[0].data=[s,tr,m,c]; 
+                budgetChart.update();
+            }
+            
+            // Polar Area Chart (Spot types)
+            const ids = state.itinerary.flat(), 
+                  sp = ids.map(id => state.spots.find(s=>s.id===id)).filter(s=>s);
+            
+            if (polarChart) {
+                polarChart.data.datasets[0].data=[
+                    sp.filter(s=>s.type==='自然').length,
+                    sp.filter(s=>s.type==='人文').length,
+                    sp.filter(s=>s.type==='滑雪').length,
+                    sp.filter(s=>s.type==='custom').length
+                ]; 
+                polarChart.update();
+            }
+            
+            // Weather Prediction
+            const temp = parseInt(document.getElementById('temp-slider').value) || -20;
+            document.getElementById('temp-val').innerText = temp;
+            document.getElementById('prob-fog').innerText = `${Math.min(99, Math.max(20, 100 + temp * 2))}%`;
+            document.getElementById('prob-ice').innerText = `${Math.min(99, Math.max(10, 100 + temp * 3))}%`;
         }
 
         window.updateDashboard = () => {
-            renderBudget();
+            renderBudget(); // Must run first to calculate totals
+            
             const t=document.getElementById('disp-total').innerText;
             document.getElementById('dash-total').innerText=t;
             document.getElementById('dash-days').innerText=state.itinerary.length;
-            document.getElementById('dash-pack').innerText=document.getElementById('pack-percent-text').innerText.replace('%','');
+            
+            // Pack % is updated by updateGearStats() which is called by renderGear()
+            updateGearStats(); 
+            
             document.getElementById('dash-ski-spots').innerText=state.itinerary.flat().map(id=>state.spots.find(s=>s.id===id)).filter(s=>s&&s.type==='滑雪').length;
             window.updateCharts();
+            
+            // Debounce save is called inside renderBudget and updateGearStats
         }
+        
         window.initCharts = () => {
-            budgetChart=new Chart(document.getElementById('budgetDoughnutChart'),{type:'doughnut',data:{labels:['住','行','食','自'],datasets:[{data:[1,1,1,1],backgroundColor:['#3B82F6','#10B981','#8B5CF6','#F97316'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:10}}}}});
-            polarChart=new Chart(document.getElementById('spotPolarChart'),{type:'polarArea',data:{labels:['自然','人文','滑雪','自定'],datasets:[{data:[1,1,1,0],backgroundColor:['#38BDF8aa','#A78BFAaa','#F97316aa','#FBBF24aa'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{ticks:{display:false}}},plugins:{legend:{position:'right',labels:{boxWidth:10}}}}});
-            packChart=new Chart(document.getElementById('packChart'),{type:'doughnut',data:{datasets:[{data:[0,1],backgroundColor:['#2563EB','#E5E7EB'],borderWidth:0,cutout:'85%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{tooltip:{enabled:false}}}});
+            // Initialize once to prevent re-creation errors
+            if (!budgetChart) {
+                budgetChart=new Chart(document.getElementById('budgetDoughnutChart'),{type:'doughnut',data:{labels:['住','行','食','自'],datasets:[{data:[1,1,1,1],backgroundColor:['#3B82F6','#10B981','#8B5CF6','#F97316'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:10}}}}});
+            }
+            if (!polarChart) {
+                polarChart=new Chart(document.getElementById('spotPolarChart'),{type:'polarArea',data:{labels:['自然','人文','滑雪','自定'],datasets:[{data:[1,1,1,0],backgroundColor:['#38BDF8aa','#A78BFAaa','#F97316aa','#FBBF24aa'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{ticks:{display:false}}},plugins:{legend:{position:'right',labels:{boxWidth:10}}}}});
+            }
+            if (!packChart) {
+                packChart=new Chart(document.getElementById('packChart'),{type:'doughnut',data:{datasets:[{data:[0,1],backgroundColor:['#2563EB','#E5E7EB'],borderWidth:0,cutout:'85%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{tooltip:{enabled:false}}}});
+            }
         }
+        
         function switchTab(id) {
             document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));
             document.getElementById(id).classList.add('active');
@@ -816,9 +1118,17 @@
             
             if(id==='routes') setTimeout(renderMap,100);
             if(id==='data') updateDashboard();
+            if(id==='pack') renderGear(); // Force render pack list on tab switch
+            
             window.scrollTo(0,0);
+        }
+
+        // --- Initial Callbacks ---
+        window.onload = () => {
+            window.initCharts();
+            initMapEvents();
+            // Initial rendering is now handled by the Firebase onAuthStateChanged and onSnapshot listeners
         }
     </script>
 </body>
 </html>
-
