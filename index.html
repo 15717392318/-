@@ -227,7 +227,7 @@
     <!-- Modal: 自定义景点 (编辑/新增) -->
     <div id="attraction-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-[fadeIn_0.2s_ease-out]">
-            <div class="flex justify-between items-center mb-5"><h3 class="font-bold text-lg text-gray-800" id="modal-title">景点详情</h3><button onclick="closeModal('attraction-modal')" class="text-gray-400 p-2"><i class="ph ph-x text-xl"></i></button></div>
+            <div class="flex justify-between items-center mb-5"><h3 class="font-bold text-lg text-gray-800">景点详情</h3><button onclick="closeModal('attraction-modal')" class="text-gray-400 p-2"><i class="ph ph-x text-xl"></i></button></div>
             <div class="space-y-4">
                 <div class="relative group cursor-pointer" onclick="document.getElementById('modal-img-input').click()">
                     <div id="modal-img-preview" class="w-full h-32 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 overflow-hidden relative">
@@ -318,6 +318,7 @@
             { id: 6, name: "可可托海", type: "滑雪", desc: "滑雪", lng: 89.967, lat: 47.164, tags: ["极限"], img: "https://placehold.co/600x400/A855F7/ffffff?text=Koktokay+Ski" },
         ];
         const defaultGear = { "核心保暖": ["羽绒服", "冲锋衣", "保暖内衣", "羊毛袜", "雪地靴"], "滑雪装备": ["头盔", "雪镜", "护脸", "手套", "护具"] };
+        window.defaultSpots = defaultSpots;
         // Initial state uses defaultSpots, but these will be OVERWRITTEN by cloud data if available
         window.state = { spots: [...defaultSpots], itinerary: [[]], currentDayIndex: 0, customBudget: [], customGear: [], weatherTemp: -20, isPickingMode: false, tempSpotCoords: null, editingSpotId: null, initialized: false, dataLoaded: false };
         let saveTimeout;
@@ -334,10 +335,11 @@
 
         window.handleAuthAction = async () => { 
              const u = document.getElementById('auth-username').value; const p = document.getElementById('auth-password').value;
-             if(!u || p.length<6) return document.getElementById('auth-error').innerText = '格式错误';
-             const email = `${u}@${configToUse.authDomain.split('.').slice(0,-2).join('.')}.canvas.local`;
-             try { if(authMode==='register') await createUserWithEmailAndPassword(auth, email, p); else await signInWithEmailAndPassword(auth, email, p); closeModal('auth-modal'); }
-             catch(e) { document.getElementById('auth-error').innerText = '认证失败'; console.error(e); }
+             if(!u) return document.getElementById('auth-error').innerText = '请输入账户名';
+             if(p.length < 6) return document.getElementById('auth-error').innerText = '密码至少需要6位';
+             const email = `${u}@travel.planner.user`; // Simple email construction
+             try { if(authMode==='register') {await createUserWithEmailAndPassword(auth, email, p); alert("注册成功！");} else await signInWithEmailAndPassword(auth, email, p); closeModal('auth-modal'); }
+             catch(e) { document.getElementById('auth-error').innerText = '认证失败: ' + e.code; }
         };
         window.handleSignOut = async () => { await signOut(auth); location.reload(); };
 
@@ -355,14 +357,14 @@
         window.renderExploreGrid = () => {
             const g=document.getElementById('explore-grid'), t=document.getElementById('explore-search').value.toLowerCase(), f=document.getElementById('explore-filter').value; g.innerHTML='';
             
-            // Render ALL spots that match filter, NO restrictions on editing default spots
+            // Render ALL spots
             window.state.spots.forEach(s=>{
-                if((s.name.toLowerCase().includes(t)||s.tags.join('').includes(t))&&(f==='all'||(f==='custom'?false:s.type===f))){ // Simplified custom filter
+                if((s.name.toLowerCase().includes(t)||s.tags.join('').includes(t))&&(f==='all'||(f==='custom'?false:s.type===f))){ 
                     const div=document.createElement('div'); div.className="bg-white rounded-2xl p-0 card-shadow border border-gray-100 flex flex-col overflow-hidden";
                     
                     let imgHtml = s.img && s.img.startsWith('http') ? `<img src="${s.img}" class="w-full h-32 object-cover">` : `<div class="w-full h-32 bg-gray-50 flex items-center justify-center text-gray-300"><i class="ph ph-image text-3xl"></i></div>`;
                     
-                    // Show Edit/Delete buttons if logged in, FOR ALL SPOTS
+                    // Always show Edit/Delete buttons if logged in
                     const actions = currentUserId ? `
                         <div class="flex items-center gap-3">
                             <button onclick="editSpot(${s.id})" class="text-blue-600 flex items-center gap-1 text-xs font-bold bg-blue-50 px-2 py-1 rounded-lg"><i class="ph ph-pencil-simple"></i> 编辑</button>
@@ -419,7 +421,7 @@
                  document.getElementById('modal-img-preview').innerHTML = `<i class="ph ph-camera text-3xl mb-2"></i><span class="text-xs">添加封面图</span>`;
                  currentModalImageBase64 = null;
              }
-             window.openAttractionModal(false); // false means 'don't reset form completely, we are editing'
+             window.openAttractionModal(false); 
         }
 
         window.openAttractionModal = (reset=true) => {
@@ -438,10 +440,6 @@
              } else {
                  btn.innerText = '保存修改';
                  title.innerText = '编辑景点';
-                 // Preview image handled in editSpot or kept current
-                 if(currentModalImageBase64) {
-                      document.getElementById('modal-img-preview').innerHTML = `<img src="${currentModalImageBase64}" class="w-full h-full object-cover rounded-xl">`;
-                 }
              }
         }
         
@@ -460,13 +458,13 @@
                       btn.innerText = '图片上传失败';
                       btn.classList.add('bg-red-500');
                       setTimeout(() => { btn.classList.remove('bg-red-500'); btn.innerText = '保存'; }, 2000);
-                      return; // Stop saving if upload failed
+                      return; 
                   }
              }
              
              const newSpot = {
                  id: window.state.editingSpotId || Date.now(), name: n, type: document.getElementById('modal-type').value, desc: document.getElementById('modal-desc').value,
-                 lng: 87.6, lat: 43.8, // Default coords, not used in H5 but kept for structure
+                 lng: 87.6, lat: 43.8, // Default coords placeholder
                  tags: [], 
                  img: imgUrl
              };
@@ -659,11 +657,11 @@
             onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    // FIX: Load FULL spots from cloud, overwriting local default if present
+                    // FIX: Always prioritize cloud data for spots, never fallback to default if cloud data exists
                     if (data.spots && data.spots.length > 0) {
                         window.state.spots = data.spots;
                     } else {
-                        // Fallback only if cloud is completely empty of spots
+                        // Only use defaults on very first load ever
                         window.state.spots = [...window.defaultSpots];
                     }
 
