@@ -299,6 +299,8 @@
             authDomain: "xinjiang-c95f8.firebaseapp.com",
             projectId: "xinjiang-c95f8",
             storageBucket: "xinjiang-c95f8.appspot.com",
+            appId: "1:9349832948:web:324982394829384", 
+            messagingSenderId: "9349832948"
         };
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
@@ -343,9 +345,10 @@
              catch(e) { 
                  console.error("Auth Error:", e);
                  let msg = "认证失败";
-                 if (e.code === 'auth/unauthorized-domain') msg = "当前域名未在Firebase授权(auth/unauthorized-domain)";
-                 else if (e.code === 'auth/email-already-in-use') msg = "邮箱已被注册";
+                 if (e.code === 'auth/unauthorized-domain') msg = "当前域名未在Firebase授权";
+                 else if (e.code === 'auth/email-already-in-use') msg = "账户已存在";
                  else if (e.code === 'auth/weak-password') msg = "密码太弱";
+                 else if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password') msg = "账户或密码错误";
                  else if (e.message) msg = e.message;
                  document.getElementById('auth-error').innerText = msg;
              }
@@ -453,6 +456,10 @@
              } else {
                  btn.innerText = '保存修改';
                  title.innerText = '编辑景点';
+                 // Preview image handled in editSpot or kept current
+                 if(currentModalImageBase64) {
+                      document.getElementById('modal-img-preview').innerHTML = `<img src="${currentModalImageBase64}" class="w-full h-full object-cover rounded-xl">`;
+                 }
              }
         }
         
