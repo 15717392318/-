@@ -8,8 +8,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     
-    <!-- FIX: 移除 AMap 脚本 -->
-
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
         
@@ -20,68 +18,55 @@
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         
-        #map-wrapper {
-            /* 移除 Canvas 相关的背景图案，但保留样式作为容器 */
-            cursor: default; overflow: hidden; position: relative;
-            touch-action: none;
-        }
-        #map-wrapper:active { cursor: default; }
+        #map-wrapper { cursor: default; overflow: hidden; position: relative; touch-action: none; }
 
-        /* 移动端底部导航激活态 */
         .mobile-nav-btn.active { color: #2563EB; }
         
-        /* 滚动条美化 */
         .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #CBD5E1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background-color: transparent; }
 
-        /* Input error ring */
-        .ring-red-500 {
-            transition: all 0.2s ease-in-out;
-        }
+        .ring-red-500 { transition: all 0.2s ease-in-out; }
     </style>
 </head>
 <body class="flex flex-col min-h-screen">
 
-    <!-- 顶部标题栏 (Mobile & Desktop) -->
+    <!-- 顶部标题栏 -->
     <header class="bg-white/90 backdrop-blur-md sticky top-0 z-40 border-b border-gray-200 shadow-sm">
         <div class="container mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center gap-2">
                 <div class="bg-blue-600 text-white p-1.5 rounded-lg shadow-md shadow-blue-500/30">
-                    <i class="ph ph-lock text-xl"></i>
+                    <i class="ph ph-airplane-tilt text-xl"></i>
                 </div>
-                <h1 class="font-bold text-gray-800 text-base leading-tight">旅游规划师 <span class="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-100 align-middle" id="sync-status-badge">需登录</span></h1>
+                <h1 class="font-bold text-gray-800 text-base leading-tight">旅行规划师 <span class="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-100 align-middle" id="sync-status-badge">需登录</span></h1>
             </div>
             
-            <!-- 登录/Profile Button -->
             <div class="flex items-center gap-2">
-                <!-- 新增快速退出按钮 (只有登录后才显示) -->
-                <button id="logout-button-header" onclick="handleSignOut()" 
+                <button id="logout-button-header" onclick="window.handleSignOut()" 
                         class="hidden bg-red-100 px-3 py-1 rounded-xl text-xs text-red-600 hover:bg-red-200 transition-colors items-center gap-1">
                     <i class="ph ph-sign-out"></i> 退出
                 </button>
 
-                <button id="auth-button" onclick="openAuthModal()" 
+                <button id="auth-button" onclick="window.openAuthModal()" 
                         class="bg-gray-100 px-3 py-1 rounded-xl text-sm text-gray-600 hover:bg-gray-200 transition-colors flex items-center gap-1">
                     <i class="ph ph-user-circle"></i>
                     <span id="auth-status">登录/注册</span>
                 </button>
             </div>
             
-            <!-- Desktop Nav (Hidden on Mobile) -->
             <nav class="hidden md:flex bg-gray-100/50 p-1 rounded-xl border border-gray-100">
-                <button onclick="switchTab('explore')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="explore">🏔️ 百科</button>
-                <button onclick="switchTab('routes')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="routes">🗺️ 地图</button>
-                <button onclick="switchTab('budget')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="budget">💰 预算</button>
-                <button onclick="switchTab('data')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="data">📊 看板</button>
-                <button onclick="switchTab('pack')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="pack">🎒 清单</button>
+                <button onclick="window.switchTab('explore')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="explore">🏔️ 百科</button>
+                <button onclick="window.switchTab('routes')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="routes">🗺️ 行程</button>
+                <button onclick="window.switchTab('budget')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="budget">💰 预算</button>
+                <button onclick="window.switchTab('data')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="data">📊 看板</button>
+                <button onclick="window.switchTab('pack')" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 hover:bg-white hover:shadow-sm" data-tab="pack">🎒 清单</button>
             </nav>
         </div>
     </header>
 
     <main class="flex-grow container mx-auto px-4 py-4">
         
-        <!-- Loading State Placeholder -->
+        <!-- Loading State -->
         <div id="loading-state" class="absolute inset-0 bg-gray-50/70 backdrop-blur-sm z-40 flex items-center justify-center hidden">
             <div class="flex flex-col items-center p-8 bg-white rounded-xl shadow-xl">
                 <div class="ph ph-spinner-gap animate-spin text-4xl text-blue-600 mb-3"></div>
@@ -93,17 +78,17 @@
         <section id="explore" class="tab-content active">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold text-gray-800">景点发现</h2>
-                <button onclick="openAttractionModal()" class="bg-blue-600 active:bg-blue-700 text-white px-3 py-2 rounded-xl shadow-lg flex items-center gap-1 text-xs transition-transform active:scale-95">
-                    <i class="ph ph-plus-bold"></i> 自定义
+                <button onclick="window.openAttractionModal()" class="bg-blue-600 active:bg-blue-700 text-white px-3 py-2 rounded-xl shadow-lg flex items-center gap-1 text-xs transition-transform active:scale-95">
+                    <i class="ph ph-plus-bold"></i> 新增景点
                 </button>
             </div>
             <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 mb-4 flex flex-col gap-3 sticky top-16 z-30">
                 <div class="relative w-full">
                     <i class="ph ph-magnifying-glass absolute left-3 top-3 text-gray-400"></i>
-                    <input type="text" id="explore-search" placeholder="搜景点..." oninput="renderExploreGrid()" class="w-full bg-gray-50 border-0 rounded-xl pl-9 pr-3 py-2.5 text-sm ring-1 ring-gray-200 outline-none">
+                    <input type="text" id="explore-search" placeholder="搜景点..." oninput="window.renderExploreGrid()" class="w-full bg-gray-50 border-0 rounded-xl pl-9 pr-3 py-2.5 text-sm ring-1 ring-gray-200 outline-none">
                 </div>
                 <div class="flex overflow-x-auto gap-2 pb-1 custom-scrollbar">
-                    <select id="explore-filter" onchange="renderExploreGrid()" class="bg-gray-50 border-0 rounded-xl px-3 py-2 text-xs outline-none flex-shrink-0 ring-1 ring-gray-200">
+                    <select id="explore-filter" onchange="window.renderExploreGrid()" class="bg-gray-50 border-0 rounded-xl px-3 py-2 text-xs outline-none flex-shrink-0 ring-1 ring-gray-200">
                         <option value="all">全部类型</option><option value="自然">🏔️ 自然</option><option value="人文">🕌 人文</option><option value="滑雪">🎿 滑雪</option><option value="custom">✨ 自定义</option>
                     </select>
                 </div>
@@ -111,16 +96,15 @@
             <div id="explore-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-20"></div>
         </section>
 
-        <!-- 2. 行程脑图 (原地图页面) -->
+        <!-- 2. 行程脑图 -->
         <section id="routes" class="tab-content">
             <div class="flex flex-col lg:grid lg:grid-cols-12 gap-4 h-auto lg:h-[calc(100vh-100px)]">
                 
-                <!-- 行程天数列表 (col-span-3) -->
+                <!-- 侧边栏 -->
                 <div class="lg:col-span-3 flex flex-col gap-3 bg-white p-3 rounded-2xl shadow-sm border border-gray-100 order-2 lg:order-1">
                     <div class="flex justify-between items-center">
                         <h3 class="font-bold text-gray-800 text-sm">📅 行程</h3>
-                        <!-- FIX: “+ 天数”按钮调用 addDay() -->
-                        <button onclick="addDay()" class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100">+ 天数</button>
+                        <button onclick="window.addDay()" class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100">+ 天数</button>
                     </div>
                     <div id="day-list" class="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto custom-scrollbar pb-2 lg:pb-0 h-auto lg:h-1/2"></div>
                     <div class="mt-2 border-t pt-2 lg:h-1/2 lg:flex-col lg:flex hidden lg:flex">
@@ -129,25 +113,29 @@
                     </div>
                 </div>
 
-                <!-- 脑图可视化区域 (lg:col-span-6) -->
+                <!-- 脑图区域 -->
                 <div class="lg:col-span-6 bg-white rounded-2xl shadow-xl border border-gray-100 p-6 flex flex-col order-1 lg:order-2 h-[500px] lg:h-full">
-                    <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
-                        <i class="ph ph-tree-structure text-blue-600"></i> 第 <span id="current-day-num">1</span> 天 - 行程脑图
-                    </h3>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2">
+                            <i class="ph ph-tree-structure text-blue-600"></i> 第 <span id="current-day-num">1</span> 天
+                        </h3>
+                        <button onclick="window.exportToXMind()" class="bg-green-50 text-green-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-green-100 border border-green-200 transition flex items-center gap-1" title="导出为 Markdown">
+                            <i class="ph ph-export"></i> 导出 XMind
+                        </button>
+                    </div>
                     <div id="itinerary-mind-map" class="flex-grow overflow-y-auto space-y-6 custom-scrollbar">
-                        <!-- Content will be rendered by renderItineraryView() -->
                         <div class="text-center text-gray-500 py-12">加载中...</div>
                     </div>
                 </div>
 
-                <!-- 景点添加列表 (col-span-3) -->
+                <!-- 景点列表 -->
                 <div class="lg:col-span-3 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full order-3">
                     <div class="lg:hidden mb-4">
                         <h3 class="font-bold text-gray-800 mb-2 text-sm">📍 当日景点 (<span id="day-spot-count">0</span>)</h3>
                         <div id="day-spots-list-mobile" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar text-xs"></div>
                     </div>
-                    <h3 class="font-bold text-gray-800 mb-3 text-sm">➕ 添加景点</h3>
-                    <input type="text" id="spot-search" placeholder="搜索..." oninput="renderAllSpots()" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3 outline-none">
+                    <h3 class="font-bold text-gray-800 mb-3 text-sm">➕ 添加景点到当天</h3>
+                    <input type="text" id="spot-search" placeholder="搜索..." oninput="window.renderAllSpots()" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3 outline-none">
                     <div id="all-spots-list" class="flex-grow overflow-y-auto space-y-2 pr-1 custom-scrollbar max-h-60 lg:max-h-none"></div>
                 </div>
             </div>
@@ -159,34 +147,26 @@
                 <div class="lg:col-span-5 space-y-4">
                     <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                         <div class="flex items-center gap-2 mb-3 text-blue-600 text-sm font-bold"><i class="ph ph-plus-circle text-lg"></i> 添加支出</div>
-                        <!-- FIX: 自定义支出输入结构重构 -->
                         <div class="grid grid-cols-6 gap-2 mb-3">
                             <input type="text" id="custom-item-name" placeholder="项目" class="col-span-3 bg-gray-50 border-0 rounded-lg px-2 py-2 text-sm ring-1 ring-gray-200 outline-none" title="项目名称">
                             <input type="number" id="custom-item-people" placeholder="人数" class="col-span-1 bg-gray-50 border-0 rounded-lg px-2 py-2 text-sm ring-1 ring-gray-200 outline-none" title="人数 (用于分摊)">
                             <input type="number" id="custom-item-days" placeholder="天数" class="col-span-1 bg-gray-50 border-0 rounded-lg px-2 py-2 text-sm ring-1 ring-gray-200 outline-none" title="天数 (1代表一次性消费)">
-                            <!-- FIX: 付款人改为自由输入框 -->
                             <input type="text" id="custom-item-payer" placeholder="付款人" class="col-span-1 bg-gray-50 border-0 rounded-lg px-2 py-2 text-sm ring-1 ring-gray-200 outline-none" title="付款人">
                         </div>
                         <div class="flex gap-2">
                              <input type="number" id="custom-item-price" placeholder="金额 (¥)" class="flex-grow bg-gray-50 border-0 rounded-lg px-3 py-2 text-sm ring-1 ring-gray-200 outline-none">
-                            <!-- FIX: “添加支出”按钮调用 addCustomBudgetItem() -->
-                            <button onclick="addCustomBudgetItem()" class="bg-blue-600 text-white px-3 rounded-lg hover:bg-blue-700 transition"><i class="ph ph-check-bold"></i></button>
+                            <button onclick="window.addCustomBudgetItem()" class="bg-blue-600 text-white px-3 rounded-lg hover:bg-blue-700 transition"><i class="ph ph-check-bold"></i></button>
                         </div>
                     </div>
                     <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                         <h3 class="font-bold text-gray-800 mb-3 text-sm">基础设定</h3>
                         <div class="grid grid-cols-2 gap-3 text-sm">
-                            <!-- FIX: 添加 onchange="debounceSave()" 确保输入同步 -->
-                            <div><label class="text-xs text-gray-400">人数</label><input type="number" id="budget-people" value="2" class="w-full mt-1 border rounded p-1.5" onchange="updateDashboard(); debounceSave()"></div>
+                            <div><label class="text-xs text-gray-400">人数</label><input type="number" id="budget-people" value="2" class="w-full mt-1 border rounded p-1.5" onchange="window.updateDashboard(); window.debounceSave()"></div>
                             <div><label class="text-xs text-gray-400">天数</label><input type="number" id="budget-days" value="1" disabled class="w-full mt-1 bg-gray-50 border rounded p-1.5 text-gray-400"></div>
-                            <!-- FIX: 住宿/间 仍按天计算 -->
-                            <div><label class="text-xs text-gray-400">住宿/间 (x天)</label><input type="number" id="price-stay" value="400" class="w-full mt-1 border rounded p-1.5" onchange="updateDashboard(); debounceSave()"></div>
-                            <!-- FIX: 车费/天 仍按天计算 -->
-                            <div><label class="text-xs text-gray-400">车费/天 (x天)</label><input type="number" id="price-trans" value="500" class="w-full mt-1 border rounded p-1.5" onchange="updateDashboard(); debounceSave()"></div>
-                            <!-- FIX: 餐/人 按人 x 天数计算 -->
-                            <div><label class="text-xs text-gray-400">餐/人 (x人x天)</label><input type="number" id="price-food" value="150" class="w-full mt-1 border rounded p-1.5" onchange="updateDashboard(); debounceSave()"></div>
-                            <!-- FIX: 门票/人 按人计算，不乘天数 -->
-                            <div><label class="text-xs text-gray-400">门票/人 (x人)</label><input type="number" id="price-ticket" value="800" class="w-full mt-1 border rounded p-1.5" onchange="updateDashboard(); debounceSave()"></div>
+                            <div><label class="text-xs text-gray-400">住宿/间 (x天)</label><input type="number" id="price-stay" value="400" class="w-full mt-1 border rounded p-1.5" onchange="window.updateDashboard(); window.debounceSave()"></div>
+                            <div><label class="text-xs text-gray-400">车费/天 (x天)</label><input type="number" id="price-trans" value="500" class="w-full mt-1 border rounded p-1.5" onchange="window.updateDashboard(); window.debounceSave()"></div>
+                            <div><label class="text-xs text-gray-400">餐/人 (x人x天)</label><input type="number" id="price-food" value="150" class="w-full mt-1 border rounded p-1.5" onchange="window.updateDashboard(); window.debounceSave()"></div>
+                            <div><label class="text-xs text-gray-400">门票/人 (x人)</label><input type="number" id="price-ticket" value="800" class="w-full mt-1 border rounded p-1.5" onchange="window.updateDashboard(); window.debounceSave()"></div>
                         </div>
                     </div>
                 </div>
@@ -222,11 +202,10 @@
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"><h3 class="text-sm font-bold text-gray-700 mb-2">玩法分布</h3><div class="h-48"><canvas id="spotPolarChart"></canvas></div></div>
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                     <h3 class="text-sm font-bold text-gray-700 mb-2">奇景预测 (<span id="temp-val">--20</span>°C)</h3>
-                    <!-- FIX: 添加 oninput="debounceSave()" 确保温度同步 -->
-                    <input type="range" id="temp-slider" min="-40" max="5" value="-20" oninput="updateDashboard(); debounceSave()" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mb-4">
+                    <input type="range" id="temp-slider" min="-40" max="5" value="-20" oninput="window.updateDashboard(); window.debounceSave()" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mb-4">
                     <div class="grid grid-cols-2 gap-3 text-xs">
                         <div><div class="text-gray-500 mb-1">晨雾</div><div class="font-bold text-gray-800" id="prob-fog">85%</div></div>
-                        <div><div class="font-bold text-gray-800" id="prob-ice">90%</div></div>
+                        <div><div class="text-gray-500 mb-1">蓝冰</div><div class="font-bold text-gray-800" id="prob-ice">90%</div></div>
                     </div>
                 </div>
             </div>
@@ -241,10 +220,10 @@
                         <h2 class="font-bold text-gray-800">准备进度</h2>
                         <p class="text-xs text-gray-400 mt-1">已选 <span id="pack-checked-count">0</span> / <span id="pack-total-count">0</span></p>
                     </div>
-                    <button onclick="exportGearList()" class="bg-blue-50 text-blue-600 p-2 rounded-lg text-xl hover:bg-blue-100 transition"><i class="ph ph-export"></i></button>
+                    <button onclick="window.exportGearList()" class="bg-blue-50 text-blue-600 p-2 rounded-lg text-xl hover:bg-blue-100 transition"><i class="ph ph-export"></i></button>
                 </div>
-                <!-- FIX: addCustomGear now calls debounceSave internally -->
-                <button onclick="addCustomGear()" class="w-full py-2 border border-dashed border-gray-300 rounded-xl text-xs text-gray-500 mb-4 hover:bg-gray-50 transition">+ 添加自定义物品</button>
+                <!-- 修复: 确保添加功能正常 -->
+                <button onclick="window.addCustomGear()" class="w-full py-2 border border-dashed border-gray-300 rounded-xl text-xs text-gray-500 mb-4 hover:bg-gray-50 transition">+ 添加自定义物品</button>
                 <div id="gear-container" class="space-y-4 pb-20"></div>
             </div>
         </section>
@@ -252,126 +231,85 @@
 
     <!-- Mobile Bottom Navigation -->
     <nav class="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 z-50 flex justify-around items-center pb-safe pt-2 px-1 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <button onclick="switchTab('explore')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400 active" data-tab="explore"><i class="ph ph-mountains text-2xl"></i><span class="text-[10px]">百科</span></button>
-        <button onclick="switchTab('routes')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="routes"><i class="ph ph-map-trifold text-2xl"></i><span class="text-[10px]">地图</span></button>
-        <button onclick="switchTab('budget')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="budget"><i class="ph ph-calculator text-2xl"></i><span class="text-[10px]">预算</span></button>
-        
-        <button onclick="openAuthModal()" class="flex flex-col items-center justify-center w-12 h-12 bg-blue-600 rounded-full text-white shadow-lg -mt-6 border-4 border-white" title="账户">
+        <button onclick="window.switchTab('explore')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400 active" data-tab="explore"><i class="ph ph-mountains text-2xl"></i><span class="text-[10px]">百科</span></button>
+        <button onclick="window.switchTab('routes')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="routes"><i class="ph ph-map-trifold text-2xl"></i><span class="text-[10px]">行程</span></button>
+        <button onclick="window.switchTab('budget')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="budget"><i class="ph ph-calculator text-2xl"></i><span class="text-[10px]">预算</span></button>
+        <button onclick="window.openAuthModal()" class="flex flex-col items-center justify-center w-12 h-12 bg-blue-600 rounded-full text-white shadow-lg -mt-6 border-4 border-white" title="账户">
             <i class="ph ph-user text-2xl"></i>
         </button>
-
-        <button onclick="switchTab('data')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="data"><i class="ph ph-chart-pie-slice text-2xl"></i><span class="text-[10px]">统计</span></button>
-        <!-- FIX: 添加清单 (Pack) 按钮 -->
-        <button onclick="switchTab('pack')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="pack"><i class="ph ph-backpack text-2xl"></i><span class="text-[10px]">清单</span></button>
+        <button onclick="window.switchTab('data')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="data"><i class="ph ph-chart-pie-slice text-2xl"></i><span class="text-[10px]">统计</span></button>
+        <button onclick="window.switchTab('pack')" class="mobile-nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="pack"><i class="ph ph-backpack text-2xl"></i><span class="text-[10px]">清单</span></button>
     </nav>
 
     <!-- Modal: 自定义景点 -->
     <div id="attraction-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl w-full max-w-sm p-5 shadow-2xl animate-[fadeIn_0.2s_ease-out]">
-            <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-gray-800">自定义地点</h3><button onclick="closeModal('attraction-modal')" class="text-gray-400"><i class="ph ph-x text-xl"></i></button></div>
+            <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-gray-800">自定义地点</h3><button onclick="window.closeModal('attraction-modal')" class="text-gray-400"><i class="ph ph-x text-xl"></i></button></div>
             
             <div class="space-y-3">
                 <div class="relative group cursor-pointer" onclick="document.getElementById('modal-img-input').click()">
                     <div id="modal-img-preview" class="w-full h-24 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 group-hover:bg-gray-50 group-hover:border-blue-300 transition overflow-hidden">
-                        <i class="ph ph-image text-2xl mb-1"></i><span class="text-xs">点击添加封面图片 (可选)</span>
+                        <i class="ph ph-image text-2xl mb-1"></i><span class="text-xs">点击更改图片</span>
                     </div>
-                    <input type="file" id="modal-img-input" accept="image/*" class="hidden" onchange="previewImage(this)">
+                    <input type="file" id="modal-img-input" accept="image/*" class="hidden" onchange="window.previewImage(this)">
                 </div>
                 
                 <input type="text" id="modal-name" placeholder="名称 (如: 隐藏打卡点)" class="w-full bg-gray-50 border-0 rounded-xl p-3 ring-1 ring-gray-200 outline-none">
                 <div class="flex gap-2">
                     <select id="modal-type" class="bg-gray-50 border-0 rounded-xl p-3 ring-1 ring-gray-200 outline-none flex-grow"><option value="custom">✨ 私藏</option><option value="自然">🏔️ 自然</option><option value="人文">🕌 人文</option><option value="滑雪">🎿 滑雪</option></select>
                     <!-- FIX: 移除选位置按钮，只显示坐标 -->
-                    <button onclick="pickLocationFromModal()" class="bg-gray-50 text-gray-600 px-3 rounded-xl text-sm font-medium border border-gray-200 whitespace-nowrap cursor-default">📍 选位置</button>
+                    <button onclick="window.pickLocationFromModal()" class="bg-gray-50 text-gray-600 px-3 rounded-xl text-sm font-medium border border-gray-200 whitespace-nowrap cursor-default">📍 选位置</button>
                 </div>
                 <textarea id="modal-desc" placeholder="备注..." class="w-full bg-gray-50 border-0 rounded-xl p-3 ring-1 ring-gray-200 h-20 outline-none resize-none"></textarea>
                 <div class="text-xs text-gray-400 text-center" id="modal-coords-display">坐标: 未设置</div>
             </div>
-            <button onclick="saveCustomSpot()" id="save-spot-btn" class="w-full mt-5 bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition">保 存</button>
+            <button onclick="window.saveCustomSpot()" id="save-spot-btn" class="w-full mt-5 bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition">保 存</button>
         </div>
     </div>
 
-    <!-- Modal: 登录/注册 (Username based) -->
+    <!-- Modal: 登录/注册 -->
     <div id="auth-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-[fadeIn_0.2s_ease-out]">
             <div id="auth-info" class="mb-4 hidden">
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="text-xl font-bold text-gray-800">欢迎回来</h3>
-                    <!-- FIX: 新增关闭按钮 -->
-                    <button onclick="closeModal('auth-modal')" class="text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
+                    <button onclick="window.closeModal('auth-modal')" class="text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
                 </div>
                 <p class="text-sm text-gray-600 truncate">账户: <span id="user-email-display" class="font-medium"></span></p>
-                <button onclick="handleSignOut()" class="w-full mt-4 bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition">退出登录</button>
+                <button onclick="window.handleSignOut()" class="w-full mt-4 bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition">退出登录</button>
             </div>
 
             <div id="auth-form">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-xl font-bold text-gray-800" id="auth-title">登录账户</h3>
-                    <button onclick="closeModal('auth-modal')" class="text-gray-400"><i class="ph ph-x text-xl"></i></button>
+                    <button onclick="window.closeModal('auth-modal')" class="text-gray-400"><i class="ph ph-x text-xl"></i></button>
                 </div>
                 <input type="text" id="auth-username" placeholder="账户名" class="w-full mb-3 bg-gray-50 border-0 rounded-lg p-3 ring-1 ring-gray-200 outline-none">
                 <input type="password" id="auth-password" placeholder="密码 (至少6位)" class="w-full mb-3 bg-gray-50 border-0 rounded-lg p-3 ring-1 ring-gray-200 outline-none">
                 <input type="password" id="auth-password-confirm" placeholder="确认密码" class="w-full mb-3 bg-gray-50 border-0 rounded-lg p-3 ring-1 ring-gray-200 outline-none hidden">
                 <p id="auth-error" class="text-red-500 text-xs mb-3"></p>
 
-                <button onclick="handleAuthAction()" id="auth-submit-btn" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition">登录</button>
-                <button onclick="toggleAuthMode()" id="auth-toggle-btn" class="w-full mt-3 text-sm text-blue-600 hover:underline">切换到注册</button>
+                <button onclick="window.handleAuthAction()" id="auth-submit-btn" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition">登录</button>
+                <button onclick="window.toggleAuthMode()" id="auth-toggle-btn" class="w-full mt-3 text-sm text-blue-600 hover:underline">切换到注册</button>
             </div>
         </div>
     </div>
 
     <!-- Firebase Scripts -->
     <script type="module">
-        // =========================================================================
-        // 🚨🚨🚨 最终解决方案：请将以下规则复制并发布到您的 Firebase Console 🚨🚨🚨
-        // =========================================================================
-
-        /* ** [ Firestore Database Rules ] **
-         ** 解决数据回档问题 (Permission Denied) **
-        */
-        /* rules_version = '2';
-        service cloud.firestore {
-          match /databases/{database}/documents {
-            // 允许任何已登录的用户读取和写入这个数据库中的所有数据
-            match /{document=**} {
-              allow read, write: if request.auth != null;
-            }
-          }
-        }
-        */
-
-        /* ** [ Firebase Storage Rules ] **
-         ** 解决图片上传失败问题 **
-        */
-        /*
-        rules_version = '2';
-        service firebase.storage {
-          match /b/{bucket}/o {
-            match /{allPaths=**} {
-              // 允许任何已认证的用户读取和写入
-              allow read, write: if request.auth != null;
-            }
-          }
-        }
-        */
-
-        // =========================================================================
-
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, query, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js"; 
         
-        setLogLevel('debug'); // Enable Firestore logging
+        setLogLevel('debug');
 
         // --- DEPLOYMENT CONFIGURATION ---
-        
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
-        // 2. Custom Configuration provided by user
+        // 2. Custom Configuration
         const customFirebaseConfig = {
-            // YOUR PROVIDED CONFIGURATION
             apiKey: "AIzaSyAlbsoPG7J2cDocEGisruheVdTaX1Wajgc",
             authDomain: "xinjiang-c95f8.firebaseapp.com",
             projectId: "xinjiang-c95f8",
@@ -380,30 +318,110 @@
 
         const configToUse = typeof __firebase_config !== 'undefined' && __firebase_config ? JSON.parse(__firebase_config) : customFirebaseConfig;
         const firebaseConfig = configToUse;
-        
-        // --- END CONFIGURATION ---
 
         let app, db, auth, storage; 
         let authMode = 'login'; 
         let currentUserId = null;
         let isAuthReady = false;
 
-        window.openAuthModal = openAuthModal;
-        window.toggleAuthMode = toggleAuthMode;
-        window.handleAuthAction = handleAuthAction;
-        window.handleSignOut = handleSignOut;
-        window.saveUserData = saveUserData;
-        window.uploadImageAndGetUrl = uploadImageAndGetUrl; 
+        // FIX: Make authentication functions globally available
+        window.openAuthModal = () => document.getElementById('auth-modal').classList.remove('hidden');
+        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
         
-        // Global utility to force all rendering functions to re-run after data load/sync
+        window.toggleAuthMode = () => {
+            const title = document.getElementById('auth-title');
+            const submitBtn = document.getElementById('auth-submit-btn');
+            const toggleBtn = document.getElementById('auth-toggle-btn');
+            const confirmPass = document.getElementById('auth-password-confirm');
+            const errorEl = document.getElementById('auth-error');
+            errorEl.textContent = '';
+            if (authMode === 'login') {
+                authMode = 'register';
+                title.textContent = '注册新账户';
+                submitBtn.textContent = '注册';
+                toggleBtn.textContent = '已有账户？切换到登录';
+                confirmPass.classList.remove('hidden');
+            } else {
+                authMode = 'login';
+                title.textContent = '登录账户';
+                submitBtn.textContent = '登录';
+                toggleBtn.textContent = '没有账户？切换到注册';
+                confirmPass.classList.add('hidden');
+            }
+        };
+
+        window.handleAuthAction = async () => {
+            const username = document.getElementById('auth-username').value;
+            const password = document.getElementById('auth-password').value;
+            const confirmPassword = document.getElementById('auth-password-confirm').value;
+            const errorEl = document.getElementById('auth-error');
+            errorEl.textContent = '';
+            if (!username || password.length < 6) {
+                errorEl.textContent = '账户名不能为空，密码至少6位。';
+                return;
+            }
+            if (authMode === 'register' && password !== confirmPassword) {
+                errorEl.textContent = '两次输入的密码不一致。';
+                return;
+            }
+            const email = `${username}@${firebaseConfig.authDomain.split('.').slice(0, -2).join('.')}.canvas.local`;
+            try {
+                if (authMode === 'register') {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                } else {
+                    await signInWithEmailAndPassword(auth, email, password);
+                }
+                document.getElementById('auth-modal').classList.add('hidden');
+            } catch (error) {
+                let errorMessage = '认证失败。';
+                if (error.code === 'auth/email-already-in-use') errorMessage = '该账户名已被注册。';
+                if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') errorMessage = '账户名或密码错误。';
+                errorEl.textContent = errorMessage;
+            }
+        };
+
+        window.handleSignOut = async () => {
+            try { await signOut(auth); document.getElementById('auth-modal').classList.add('hidden'); window.location.reload(); } catch (error) {}
+        };
+        
+        window.uploadImageAndGetUrl = async (base64Data, userId) => {
+            if (!storage || !base64Data || !userId) return null;
+            const path = `images/${userId}/${Date.now()}.jpeg`;
+            const storageRef = ref(storage, path);
+            try {
+                await uploadString(storageRef, base64Data, 'data_url');
+                return await getDownloadURL(storageRef);
+            } catch (error) {
+                console.error("Error uploading image:", error);
+                return null;
+            }
+        };
+        
+        window.saveUserData = async () => {
+            if (!currentUserId || !isAuthReady || !db) return;
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'data', 'state');
+                const dataToSave = {
+                    spots: window.state.spots,
+                    itinerary: JSON.stringify(window.state.itinerary), 
+                    customBudget: window.state.customBudget,
+                    customGear: window.state.customGear,
+                    lastSave: new Date().toISOString()
+                };
+                await setDoc(docRef, dataToSave, { merge: true });
+                console.log("Data successfully queued.");
+            } catch (e) {
+                console.error("CRITICAL SAVE ERROR:", e);
+                showFeedbackMessage("保存失败！请检查规则。", true);
+            }
+        };
+
         window.renderApp = () => {
             if (!window.state.initialized || !window.state.dataLoaded) {
                  document.getElementById('loading-state').classList.remove('hidden');
                  return;
             }
             document.getElementById('loading-state').classList.add('hidden');
-            
-            // Re-render all major components
             window.renderExploreGrid();
             window.renderDayList();
             window.renderAllSpots();
@@ -418,7 +436,6 @@
             return parts[0];
         }
 
-        // FIX: Add function for displaying quick feedback in header badge
         function showFeedbackMessage(message, isError = false) {
             const headerBadgeEl = document.getElementById('sync-status-badge');
             headerBadgeEl.textContent = message;
@@ -427,19 +444,15 @@
             } else {
                 headerBadgeEl.className = 'text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full border border-green-100 align-middle';
             }
-            // Restore default sync status after a short delay
-            setTimeout(() => {
-                updateAuthStateUI(auth.currentUser); 
-            }, 3000);
+            setTimeout(() => { updateAuthStateUI(auth.currentUser); }, 3000);
         }
-
 
         function updateAuthStateUI(user) {
             const statusEl = document.getElementById('auth-status');
             const headerBadgeEl = document.getElementById('sync-status-badge');
             const infoDiv = document.getElementById('auth-info');
             const formDiv = document.getElementById('auth-form');
-            const logoutHeaderBtn = document.getElementById('logout-button-header'); // FIX: Reference new button
+            const logoutHeaderBtn = document.getElementById('logout-button-header');
 
             if (user) {
                 currentUserId = user.uid;
@@ -447,25 +460,18 @@
                 statusEl.textContent = username;
                 headerBadgeEl.textContent = '已同步';
                 headerBadgeEl.className = 'text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full border border-green-100 align-middle';
-                
                 document.getElementById('user-email-display').textContent = username;
                 infoDiv.classList.remove('hidden');
                 formDiv.classList.add('hidden');
-
-                // FIX: Show header logout button
                 logoutHeaderBtn.classList.remove('hidden');
                 logoutHeaderBtn.classList.add('flex');
-                
             } else {
                 currentUserId = null;
                 statusEl.textContent = '登录/注册';
                 headerBadgeEl.textContent = '需登录';
                 headerBadgeEl.className = 'text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-100 align-middle';
-                
                 infoDiv.classList.add('hidden');
                 formDiv.classList.remove('hidden');
-
-                // FIX: Hide header logout button
                 logoutHeaderBtn.classList.add('hidden');
                 logoutHeaderBtn.classList.remove('flex');
             }
@@ -474,7 +480,6 @@
         async function initAuthAndDb() {
             try {
                 if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-                    console.error("Firebase configuration is incomplete. Data synchronization will be disabled.");
                     window.state.initialized = true; 
                     window.state.dataLoaded = true;
                     window.renderApp();
@@ -495,17 +500,14 @@
                 onAuthStateChanged(auth, (user) => {
                     isAuthReady = true;
                     updateAuthStateUI(user);
-                    
                     if (user) {
-                        setupDataListener(user.uid); // Start real-time sync
+                        setupDataListener(user.uid); 
                     } else if (!window.state.initialized) {
-                        // If not logged in and not initialized, render with defaults
                         window.state.initialized = true;
                         window.state.dataLoaded = true;
                         window.renderApp(); 
                     }
                 });
-
             } catch (error) {
                 console.error("Firebase initialization failed:", error);
                 window.state.initialized = true;
@@ -514,183 +516,42 @@
             }
         }
         
-        // --- REALTIME SYNC: onSnapshot ---
         function setupDataListener(userId) {
             const docRef = doc(db, 'artifacts', appId, 'users', userId, 'data', 'state');
             onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
-                    // Load and parse data
                     const data = docSnap.data();
-                    // Load custom spots and combine with default spots
-                    window.state.spots = [...window.defaultSpots, ...(data.spots || [])]; 
-                    // Parse itinerary string back to array
+                    if (data.spots && data.spots.length > 0) {
+                        window.state.spots = data.spots;
+                    } else {
+                        window.state.spots = [...window.defaultSpots];
+                    }
                     try {
-                        // Ensure itinerary has correct shape, even if saved as []
                         const loadedItinerary = JSON.parse(data.itinerary);
                         window.state.itinerary = loadedItinerary.length > 0 ? loadedItinerary : [[]];
                     } catch {
-                        window.state.itinerary = [[]]; // Fallback if parsing fails
+                        window.state.itinerary = [[]]; 
                     }
                     window.state.customBudget = data.customBudget || [];
                     window.state.customGear = data.customGear || [];
                 } else {
-                    // Document doesn't exist, create it with defaults
-                    saveUserData(); // This will auto-sync back via onSnapshot
+                    window.saveUserData(); 
                 }
-
-                if (!window.state.initialized) {
-                    window.state.initialized = true;
-                }
+                if (!window.state.initialized) window.state.initialized = true;
                 window.state.dataLoaded = true;
-                window.renderApp(); // Global re-render trigger
-                console.log("Firestore Data Synced and App Rendered.");
+                window.renderApp(); 
+                console.log("Firestore Data Synced.");
             }, (error) => {
-                console.error("Firestore Listener Error:", error);
-                // FIX: Show error message if listener fails (e.g., due to rules)
                 showFeedbackMessage("同步失败！请检查 Firebase 规则。", true);
                 window.state.dataLoaded = true; 
                 window.renderApp();
             });
         }
         
-        async function uploadImageAndGetUrl(base64Data, userId) {
-            if (!storage || !base64Data || !userId) return null;
-            
-            // Use the AUTH UID as the directory name
-            const path = `images/${userId}/${Date.now()}.jpeg`;
-            const storageRef = ref(storage, path);
-
-            try {
-                await uploadString(storageRef, base64Data, 'data_url');
-                const url = await getDownloadURL(storageRef);
-                return url;
-            } catch (error) {
-                console.error("Error uploading image to Storage:", error);
-                return null;
-            }
-        }
-
-        async function saveUserData() {
-            if (!currentUserId || !isAuthReady || !db) {
-                console.warn("Save skipped: User not authenticated or DB not ready.");
-                return;
-            }
-
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'data', 'state');
-                const dataToSave = {
-                    // Only save custom spots (id > 1000)
-                    spots: window.state.spots.filter(s => s.id > 1000), 
-                    // Stringify itinerary (to comply with array-in-array Firestore limitations if any)
-                    itinerary: JSON.stringify(window.state.itinerary), 
-                    customBudget: window.state.customBudget,
-                    customGear: window.state.customGear,
-                    lastSave: new Date().toISOString()
-                };
-
-                await setDoc(docRef, dataToSave, { merge: true });
-                console.log("Data successfully queued for Firestore save."); // Log success for save
-                
-            } catch (e) {
-                // FIX: Enhanced error logging and UI feedback for save failure
-                console.error("CRITICAL SAVE ERROR: Firestore write failed. Check your Firebase Rules.", e);
-                showFeedbackMessage("保存失败！请检查 Firestore 规则。", true);
-            }
-        }
-
-        // --- AUTH UI HANDLERS ---
-        function openAuthModal() {
-            document.getElementById('auth-modal').classList.remove('hidden');
-        }
-        
-        function closeModal(id) {
-            document.getElementById(id).classList.add('hidden');
-        }
-
-        function toggleAuthMode() {
-            const title = document.getElementById('auth-title');
-            const submitBtn = document.getElementById('auth-submit-btn');
-            const toggleBtn = document.getElementById('auth-toggle-btn');
-            const confirmPass = document.getElementById('auth-password-confirm');
-            const errorEl = document.getElementById('auth-error');
-            errorEl.textContent = '';
-
-            if (authMode === 'login') {
-                authMode = 'register';
-                title.textContent = '注册新账户';
-                submitBtn.textContent = '注册';
-                toggleBtn.textContent = '已有账户？切换到登录';
-                confirmPass.classList.remove('hidden');
-            } else {
-                authMode = 'login';
-                title.textContent = '登录账户';
-                submitBtn.textContent = '登录';
-                toggleBtn.textContent = '没有账户？切换到注册';
-                confirmPass.classList.add('hidden');
-            }
-        }
-
-        async function handleAuthAction() {
-            const username = document.getElementById('auth-username').value;
-            const password = document.getElementById('auth-password').value;
-            const confirmPassword = document.getElementById('auth-password-confirm').value;
-            const errorEl = document.getElementById('auth-error');
-            errorEl.textContent = '';
-
-            if (!username || password.length < 6) {
-                errorEl.textContent = '账户名不能为空，密码至少6位。';
-                return;
-            }
-
-            if (authMode === 'register' && password !== confirmPassword) {
-                errorEl.textContent = '两次输入的密码不一致。';
-                return;
-            }
-
-            // Construct Firebase-compatible email 
-            const email = `${username}@${firebaseConfig.authDomain.split('.').slice(0, -2).join('.')}.canvas.local`;
-
-            try {
-                if (authMode === 'register') {
-                    await createUserWithEmailAndPassword(auth, email, password);
-                    // Use console.log for success instead of alert
-                    console.log(`账户 ${username} 注册成功！`); 
-                } else {
-                    await signInWithEmailAndPassword(auth, email, password);
-                }
-                
-                document.getElementById('auth-modal').classList.add('hidden');
-
-            } catch (error) {
-                let errorMessage = '认证失败。';
-                if (error.code === 'auth/email-already-in-use') errorMessage = '该账户名已被注册。';
-                if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') errorMessage = '账户名或密码错误。';
-                if (error.code === 'auth/unauthorized-domain') {
-                    errorMessage += ' 部署失败。请检查：您是否已将当前域名添加到 Firebase 控制台的 [Authentication -> Settings -> Authorized domains] 列表中?';
-                }
-                errorEl.textContent = errorMessage;
-                console.error("Auth Error:", error);
-            }
-        }
-
-        async function handleSignOut() {
-            try {
-                await signOut(auth);
-                console.log("您已退出登录。"); // Removed alert
-                document.getElementById('auth-modal').classList.add('hidden');
-                // Reload to reset local state to default, which will then use dataLoaded=true to render defaults
-                window.location.reload(); 
-            } catch (error) {
-                console.error("Sign Out Error:", error);
-            }
-        }
-
         initAuthAndDb();
-
     </script>
     <script>
         // --- 核心数据 (Global State) ---
-        // 3. 数据结构改造: 移除 x/y, 增加 lng/lat 真实坐标
         const defaultSpots = [
             { id: 1, name: "乌鲁木齐", type: "人文", desc: "首府", lng: 87.617733, lat: 43.792818, tags: ["中转"], img: "https://placehold.co/600x400/38BDF8/ffffff?text=Urumqi" },
             { id: 2, name: "禾木村", type: "自然", desc: "晨雾", lng: 87.14083, lat: 48.06451, tags: ["摄影"], img: "https://placehold.co/600x400/10B981/ffffff?text=Hemu+Village" },
@@ -708,54 +569,46 @@
 
         window.state = {
             spots: [...defaultSpots], itinerary: [[]], currentDayIndex: 0,
-            customBudget: [], // [ {name: string, people: number, days: number, payer: string, price: number} ]
-            customGear: [], 
-            weatherTemp: -20,
-            isPickingMode: false, 
-            tempSpotCoords: null, // New variable for pick location mode
-            initialized: false, // Initialized Firebase/Auth
-            dataLoaded: false // Data successfully loaded from Firestore or defaulted
+            customBudget: [], customGear: [], weatherTemp: -20,
+            editingSpotId: null, 
+            initialized: false, dataLoaded: false 
         };
         
         let saveTimeout;
-        function debounceSave() {
+        window.debounceSave = function() {
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(() => {
                 if (window.saveUserData) window.saveUserData();
             }, 1500);
         }
 
-        // Global Chart Variables
         let budgetChart, polarChart, packChart;
         let currentModalImageBase64 = null; 
         
-        // --- AMap Variables (now unused, but keeping the center data) ---
-        let map = null;
-        let markers = [];
-        const XINJIANG_CENTER = {lng: 87.617733, lat: 43.792818}; // 乌鲁木齐坐标
-        
-        // --- Modal Control ---
-        window.closeModal = (id) => {
-            document.getElementById(id).classList.add('hidden');
-        }
-        
-        // --- 2. Explore & Route Logic ---
-        // NEW: Delete Custom Spot Function
+        // --- 1. Explore Logic (Updated) ---
         window.deleteCustomSpot = (id) => {
-            state.spots = state.spots.filter(s => s.id !== id);
-            renderExploreGrid(); // Re-render the grid
-            debounceSave();
+            const defaultCount = defaultSpots.length;
+            const idx = state.spots.findIndex(s => s.id === id);
+            if (idx > -1 && id > defaultCount) {
+                state.spots.splice(idx, 1);
+                state.itinerary.forEach(day => {
+                    const i = day.indexOf(id);
+                    if (i > -1) day.splice(i, 1);
+                });
+                renderExploreGrid();
+                debounceSave();
+            }
         }
-
+        
+        // Renamed deleteSpot to maintain consistency if called from buttons
+        window.deleteSpot = window.deleteCustomSpot;
 
         window.renderExploreGrid = () => {
-            const g=document.getElementById('explore-grid'), 
-                  t=document.getElementById('explore-search').value.toLowerCase(), 
-                  f=document.getElementById('explore-filter').value; 
+            const g=document.getElementById('explore-grid'), t=document.getElementById('explore-search').value.toLowerCase(), f=document.getElementById('explore-filter').value; 
             g.innerHTML='';
-            
+            const defaultCount = defaultSpots.length;
             state.spots.forEach(s=>{
-                if((s.name.toLowerCase().includes(t)||s.tags.join('').includes(t))&&(f==='all'||(f==='custom'?s.id>1000:s.type===f))){
+                if((s.name.toLowerCase().includes(t)||s.tags.join('').includes(t))&&(f==='all'||(f==='custom'?s.id>defaultCount:s.type===f))){
                     const div=document.createElement('div'); 
                     div.className="bg-white rounded-xl shadow-sm p-3 border border-gray-100 flex flex-col justify-between";
                     
@@ -763,506 +616,345 @@
                         `<img src="${s.img}" onerror="this.onerror=null;this.src='https://placehold.co/100x100/A0AEC0/ffffff?text=Image+Load+Fail';" class="w-full h-24 object-cover rounded-lg mb-2">` : 
                         `<div class="w-full h-24 bg-gray-100 flex items-center justify-center text-gray-400 rounded-lg mb-2"><i class="ph ph-map-pin"></i></div>`;
 
-                    // Check if it's a custom spot (id > 1000) for deletion option
-                    const isCustom = s.id > 1000 && window.currentUserId;
-                    const deleteBtn = isCustom ? 
-                        `<button onclick="deleteCustomSpot(${s.id})" class="text-red-500 hover:text-red-700 transition" title="删除自定义景点">🗑️</button>` : '';
+                    const isCustom = s.id > defaultCount && window.currentUserId;
+                    const btns = isCustom ? `
+                        <button onclick="window.editSpot(${s.id})" class="text-blue-500 hover:text-blue-700 transition p-1" title="编辑"><i class="ph ph-pencil-simple"></i></button>
+                        <button onclick="window.deleteCustomSpot(${s.id})" class="text-red-500 hover:text-red-700 transition p-1" title="删除"><i class="ph ph-trash"></i></button>
+                    ` : '';
 
                     div.innerHTML=`
                         ${imageHtml}
                         <div class="flex flex-col justify-between flex-grow">
                             <div class="flex justify-between items-start">
                                 <h3 class="font-bold text-gray-800">${s.name}</h3>
-                                <div class="flex items-center">
+                                <div class="flex items-center gap-1">
                                     <span class="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">${s.type}</span>
-                                    ${deleteBtn}
+                                    ${btns}
                                 </div>
                             </div>
                             <p class="text-xs text-gray-400 mt-1">${s.desc||''}</p>
-                            <button onclick="addToRoute(${s.id})" class="mt-3 w-full bg-blue-50 text-blue-600 text-xs py-2 rounded font-medium hover:bg-blue-100 transition">加入行程</button>
+                            <button onclick="window.addToRoute(${s.id})" class="mt-3 w-full bg-blue-50 text-blue-600 text-xs py-2 rounded font-medium hover:bg-blue-100 transition">加入行程</button>
                         </div>`;
                     g.appendChild(div);
                 }
             });
-            updateDashboard();
+        }
+
+        window.editSpot = (id) => {
+            const spot = state.spots.find(s => s.id === id);
+            if (!spot) return;
+            window.state.editingSpotId = id;
+            document.getElementById('modal-name').value = spot.name;
+            document.getElementById('modal-type').value = spot.type;
+            document.getElementById('modal-desc').value = spot.desc || '';
+            
+            const previewEl = document.getElementById('modal-img-preview');
+            if (spot.img) {
+                previewEl.innerHTML = `<img src="${spot.img}" class="w-full h-full object-cover rounded-lg">`;
+                currentModalImageBase64 = spot.img; 
+            } else {
+                 previewEl.innerHTML = `<i class="ph ph-image text-2xl mb-1"></i><span class="text-xs">点击添加图片</span>`;
+                 currentModalImageBase64 = null;
+            }
+            document.getElementById('save-spot-btn').innerText = '保存修改';
+            document.getElementById('attraction-modal').classList.remove('hidden');
         }
         
-        function addToRoute(id){ 
-            if (!state.itinerary[state.currentDayIndex]) {
-                state.itinerary.push([]);
-            }
+        // --- 2. Itinerary Logic ---
+        window.addToRoute = (id) => { 
+            if (!state.itinerary[state.currentDayIndex]) state.itinerary.push([]);
             state.itinerary[state.currentDayIndex].push(id); 
-            renderDayList(); 
-            debounceSave(); 
+            renderDayList(); debounceSave(); 
         }
         
         window.renderDayList = () => {
-            const l=document.getElementById('day-list'); 
-            l.innerHTML=''; 
-            
-            // Ensure itinerary has at least one day
-            if (state.itinerary.length === 0) {
-                state.itinerary.push([]);
-                state.currentDayIndex = 0;
-            }
-
+            const l=document.getElementById('day-list'); l.innerHTML=''; 
+            if (state.itinerary.length === 0) { state.itinerary.push([]); state.currentDayIndex = 0; }
             document.getElementById('budget-days').value=state.itinerary.length; 
             
             state.itinerary.forEach((s,i)=>{
                 const div=document.createElement('div'); 
                 div.className=`flex-shrink-0 lg:flex-shrink w-20 lg:w-full p-2 lg:p-3 rounded-xl border border-gray-100 cursor-pointer text-center lg:text-left transition-all ${i===state.currentDayIndex?'bg-blue-50 border-blue-200 text-blue-700':'hover:bg-gray-50 text-gray-500'}`;
-                
-                // FIX: Add delete button to day list items
-                div.innerHTML=`
-                    <div class="flex justify-between items-center w-full">
-                        <div class="font-bold text-xs">D${i+1}</div>
-                        ${state.itinerary.length > 1 || state.itinerary[i].length > 0 ? 
-                            `<button onclick="event.stopPropagation(); removeDay(${i})" class="text-red-400 hover:text-red-600 transition p-1 -m-1" title="删除或清空此日行程">
-                                <i class="ph ph-trash text-xs"></i>
-                            </button>` : ''}
-                    </div>
-                    <div class="text-[10px] opacity-70">${state.itinerary[i].length}点</div>
-                `;
-
-                div.onclick=()=>{state.currentDayIndex=i;renderDayList();}; 
-                l.appendChild(div);
+                div.innerHTML=`<div class="flex justify-between items-center w-full"><div class="font-bold text-xs">D${i+1}</div>${state.itinerary.length > 1 || state.itinerary[i].length > 0 ? `<button onclick="event.stopPropagation(); window.removeDay(${i})" class="text-red-400 hover:text-red-600 transition p-1 -m-1"><i class="ph ph-trash text-xs"></i></button>` : ''}</div><div class="text-[10px] opacity-70">${state.itinerary[i].length}点</div>`;
+                div.onclick=()=>{state.currentDayIndex=i;renderDayList();}; l.appendChild(div);
             });
-            
             document.getElementById('current-day-num').innerText=state.currentDayIndex+1;
             document.getElementById('day-spot-count').innerText=state.itinerary[state.currentDayIndex].length;
-            renderDaySpots(); 
-            
-            // FIX: Call the Mind Map visualization
-            window.renderItineraryView(); 
+            renderDaySpots(); window.renderItineraryView(); 
         }
         
-        function addDay(){ 
-            state.itinerary.push([]); 
-            state.currentDayIndex=state.itinerary.length-1; 
-            renderDayList(); 
-            debounceSave(); 
-        }
+        window.addDay = () => { state.itinerary.push([]); state.currentDayIndex=state.itinerary.length-1; renderDayList(); debounceSave(); }
 
-        // NEW: Function to remove a day (or clear the last day)
         window.removeDay = (index) => {
-            if (state.itinerary.length > 1) {
-                state.itinerary.splice(index, 1);
-                // Adjust currentDayIndex if the current day was deleted
-                if (state.currentDayIndex >= index) {
-                    state.currentDayIndex = Math.max(0, state.currentDayIndex - 1);
-                }
-            } else if (state.itinerary.length === 1) {
-                // If only one day remains, just clear it instead of deleting the last element
-                state.itinerary[0] = [];
-            }
-            window.renderDayList();
-            debounceSave();
+            if (state.itinerary.length > 1) { state.itinerary.splice(index, 1); if (state.currentDayIndex >= index) state.currentDayIndex = Math.max(0, state.currentDayIndex - 1); } 
+            else if (state.itinerary.length === 1) { state.itinerary[0] = []; }
+            window.renderDayList(); debounceSave();
         }
         
-        function renderDaySpots() {
-            const desktopL=document.getElementById('day-spots-list-desktop'), 
-                  mobileL=document.getElementById('day-spots-list-mobile');
+        window.renderDaySpots = () => {
+            const dL=document.getElementById('day-spots-list-desktop'), mL=document.getElementById('day-spots-list-mobile');
             const html = state.itinerary[state.currentDayIndex].map((id,i)=>{
-                const s=state.spots.find(sp=>sp.id===id); 
-                if(!s)return'';
-                return `<div class="flex justify-between items-center p-2 bg-gray-50 rounded"><span class="truncate">${i+1}. ${s.name}</span><button onclick="rmSpot(${i})" class="text-red-400 px-2 hover:text-red-600">×</button></div>`;
+                const s=state.spots.find(sp=>sp.id===id); if(!s)return'';
+                return `<div class="flex justify-between items-center p-2 bg-gray-50 rounded"><span class="truncate">${i+1}. ${s.name}</span><button onclick="window.rmSpot(${i})" class="text-red-400 px-2">×</button></div>`;
             }).join('');
-            desktopL.innerHTML=html; 
-            mobileL.innerHTML=html;
+            dL.innerHTML=html; mL.innerHTML=html;
         }
         
-        function rmSpot(i){
-            state.itinerary[state.currentDayIndex].splice(i,1); 
-            renderDayList(); 
-            debounceSave();
-        }
+        window.rmSpot = (i) => { state.itinerary[state.currentDayIndex].splice(i,1); renderDayList(); debounceSave(); }
         
         window.renderAllSpots = () => {
-            const l=document.getElementById('all-spots-list'), t=document.getElementById('spot-search').value.toLowerCase(); 
-            l.innerHTML='';
+            const l=document.getElementById('all-spots-list'), t=document.getElementById('spot-search').value.toLowerCase(); l.innerHTML='';
             state.spots.filter(s=>s.name.toLowerCase().includes(t)).forEach(s=>{
                 const b=document.createElement('button'); 
                 b.className="w-full text-left p-2 hover:bg-gray-50 text-xs text-gray-600 flex justify-between rounded transition";
-                b.innerHTML=`<span>${s.name}</span><span class="text-blue-500 font-bold">+</span>`; 
-                b.onclick=()=>{addToRoute(s.id)}; 
-                l.appendChild(b);
+                b.innerHTML=`<span>${s.name}</span><span class="text-blue-500 font-bold">+</span>`; b.onclick=()=>{window.addToRoute(s.id)}; l.appendChild(b);
             });
         }
         
-        // --- NEW: Mind Map Rendering Logic ---
+        // --- XMind Export Logic ---
+        window.exportToXMind = () => {
+            if (!window.state || !window.state.itinerary) { alert("暂无数据可导出"); return; }
+            
+            let md = `# 旅行规划\n\n`;
+            window.state.itinerary.forEach((daySpots, index) => {
+                md += `## 第 ${index + 1} 天\n`;
+                if (daySpots.length === 0) {
+                    md += `- (无行程)\n`;
+                } else {
+                    daySpots.forEach(spotId => {
+                        const spot = window.state.spots.find(s => s.id === spotId);
+                        if (spot) {
+                            md += `### ${spot.name}\n`;
+                            if (spot.img) md += `![](${spot.img})\n`;
+                            if (spot.desc) md += `- 备注: ${spot.desc}\n`;
+                            md += `- 类型: ${spot.type}\n`;
+                        }
+                    });
+                }
+                md += `\n`;
+            });
+
+            const blob = new Blob([md], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'travel_plan.md';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
         window.renderItineraryView = () => {
             const container = document.getElementById('itinerary-mind-map');
             const daySpots = window.state.itinerary[window.state.currentDayIndex] || [];
-            
-            if (daySpots.length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-500 py-12 border-2 border-dashed border-gray-200 rounded-xl">本天暂无行程，请从右侧添加景点。</div>';
-                return;
-            }
+            if (daySpots.length === 0) { container.innerHTML = '<div class="text-center text-gray-500 py-12 border-2 border-dashed border-gray-200 rounded-xl">本天暂无行程。</div>'; return; }
 
             const html = daySpots.map((id, index) => {
-                const spot = window.state.spots.find(s => s.id === id);
-                if (!spot) return '';
-                
-                // Get image HTML (using placeholder if null or fails)
+                const spot = window.state.spots.find(s => s.id === id); if (!spot) return '';
                 const imageHtml = spot.img && spot.img.startsWith('http') ?
                     `<img src="${spot.img}" onerror="this.onerror=null;this.src='https://placehold.co/600x320/38BDF8/ffffff?text=${spot.name.substring(0, 8)}';" class="w-full h-32 object-cover rounded-xl shadow-md mb-3">` :
                     `<div class="w-full h-32 bg-gray-100 flex items-center justify-center text-gray-400 rounded-xl shadow-md mb-3"><i class="ph ph-image text-2xl"></i><span class="ml-2">${spot.name}</span></div>`;
-
-                // Connection line for "Mind Map" / Sequence
-                const sequenceLine = index > 0 
-                    ? `<div class="w-1 h-8 bg-blue-300 mx-auto"></div>` 
-                    : '';
-
-                return `
-                    ${sequenceLine}
-                    <div class="flex items-start gap-4">
-                        <div class="flex flex-col items-center flex-shrink-0">
-                            <span class="w-8 h-8 flex items-center justify-center rounded-full bg-blue-600 text-white text-sm font-bold shadow-lg">${index + 1}</span>
-                            
-                            <!-- Sequence Dots -->
-                            ${index < daySpots.length - 1 ? '<div class="w-1 h-12 bg-blue-300"></div>' : ''}
-                        </div>
-                        <div class="flex-grow bg-white p-4 rounded-xl shadow-lg border border-gray-100">
-                            ${imageHtml}
-                            <h4 class="font-bold text-gray-800">${spot.name}</h4>
-                            <p class="text-xs text-gray-500 mt-1">${spot.desc || '无备注'}</p>
-                            <span class="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500 mt-2 inline-block">${spot.type}</span>
-                        </div>
-                    </div>
-                `;
+                const sequenceLine = index > 0 ? `<div class="w-1 h-8 bg-blue-300 mx-auto"></div>` : '';
+                return `${sequenceLine}<div class="flex items-start gap-4"><div class="flex flex-col items-center flex-shrink-0"><span class="w-8 h-8 flex items-center justify-center rounded-full bg-blue-600 text-white text-sm font-bold shadow-lg">${index + 1}</span>${index < daySpots.length - 1 ? '<div class="w-1 h-12 bg-blue-300"></div>' : ''}</div><div class="flex-grow bg-white p-4 rounded-xl shadow-lg border border-gray-100">${imageHtml}<h4 class="font-bold text-gray-800">${spot.name}</h4><p class="text-xs text-gray-500 mt-1">${spot.desc || '无备注'}</p></div></div>`;
             }).join('');
-
             container.innerHTML = html;
         };
 
-
-        // --- Custom Spot Logic ---
-        function previewImage(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('modal-img-preview').innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover rounded-lg">`;
-                    currentModalImageBase64 = e.target.result;
-                }
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-        
+        // --- Spot Modal ---
         window.openAttractionModal = (reset = true) => {
             document.getElementById('attraction-modal').classList.remove('hidden'); 
-            const saveBtn = document.getElementById('save-spot-btn');
-            
             if(reset){
-                // Reset form state
                 document.getElementById('modal-name').value=''; 
-                document.getElementById('modal-name').classList.remove('ring-red-500', 'ring-2'); // Clear feedback
-                window.state.tempSpotCoords = null; // Clear picked coordinates
+                document.getElementById('modal-name').classList.remove('ring-red-500', 'ring-2');
                 document.getElementById('modal-desc').value='';
-                document.getElementById('modal-coords-display').innerText='坐标: 未设置';
                 currentModalImageBase64 = null;
                 document.getElementById('modal-img-input').value = '';
-                document.getElementById('modal-img-preview').innerHTML = `<i class="ph ph-image text-2xl mb-1"></i><span class="text-xs">点击添加封面图片 (可选)</span>`;
-
-            } else if(window.state.tempSpotCoords) {
-                 document.getElementById('modal-coords-display').innerText = 
-                    `坐标: Lng:${Math.round(window.state.tempSpotCoords.lng * 1000) / 1000}, Lat:${Math.round(window.state.tempSpotCoords.lat * 1000) / 1000}`;
+                document.getElementById('modal-img-preview').innerHTML = `<i class="ph ph-image text-2xl mb-1"></i><span class="text-xs">点击添加/更改图片</span>`;
+                window.state.editingSpotId = null; 
+                document.getElementById('save-spot-btn').innerText = '保 存';
             }
-
-            // Always display default coordinates when modal opens for context
-            if (!window.state.tempSpotCoords) {
-                 window.state.tempSpotCoords = XINJIANG_CENTER;
-                 document.getElementById('modal-coords-display').innerText = 
-                    `坐标: Lng:${Math.round(XINJIANG_CENTER.lng * 1000) / 1000}, Lat:${Math.round(XINJIANG_CENTER.lat * 1000) / 1000} (默认)`;
-            }
-            
-            // Ensure button text is "保存" on open
-            saveBtn.innerText = '保 存';
-            saveBtn.classList.remove('bg-green-600', 'bg-red-600');
-            saveBtn.classList.add('bg-blue-600');
         }
         
-        function pickLocationFromModal(){
-            // FIX: Remove actual map logic, simplifying to coordinate placeholder setting
-            window.state.tempSpotCoords = XINJIANG_CENTER;
-            
-            const saveBtn = document.getElementById('save-spot-btn');
-            const coordsDisplay = document.getElementById('modal-coords-display');
-            
-            coordsDisplay.innerText = `坐标: Lng:${Math.round(XINJIANG_CENTER.lng * 1000) / 1000}, Lat:${Math.round(XINJIANG_CENTER.lat * 1000) / 1000} (默认)`;
-            
-            // Short UX feedback
-            saveBtn.innerText = '已设置位置 (可保存)';
-            saveBtn.classList.add('bg-green-600');
-            saveBtn.classList.remove('bg-blue-600');
-            setTimeout(() => {
-                saveBtn.innerText = '保 存';
-                saveBtn.classList.remove('bg-green-600');
-                saveBtn.classList.add('bg-blue-600');
-            }, 1000);
-            
-            console.log("地点选取已完成，使用默认中心坐标。请点击保存。");
+        window.pickLocationFromModal = () => {
+             // Location picking disabled/removed feature placeholder
+             alert("位置功能已简化为列表管理。");
         }
         
-        async function saveCustomSpot(){
+        window.saveCustomSpot = async function(){
             const nameInput = document.getElementById('modal-name');
             const n=nameInput.value;
             const saveBtn = document.getElementById('save-spot-btn');
-            
-            // Coordinate check: Uses XINJIANG_CENTER if temp is null
-            const finalCoords = window.state.tempSpotCoords || XINJIANG_CENTER;
+            const editingId = window.state.editingSpotId;
 
-            // --- FIX 1: Visual feedback for missing name ---
             if(!n || n.trim() === '') {
-                nameInput.classList.add('ring-red-500', 'ring-2'); // Visual feedback
-                setTimeout(() => nameInput.classList.remove('ring-red-500', 'ring-2'), 1000);
-                console.error("保存失败: 请输入地点名称。"); // Console error
+                nameInput.classList.add('ring-red-500', 'ring-2'); 
                 return;
             }
-            nameInput.classList.remove('ring-red-500', 'ring-2'); // Clear feedback
 
-            let imageUrl = null;
-            if (currentModalImageBase64 && window.uploadImageAndGetUrl) {
-                // FIX: Check for unauthenticated state before attempting upload
+            let imageUrl = currentModalImageBase64; 
+
+            if (currentModalImageBase64 && !currentModalImageBase64.startsWith('http')) {
                 if (!window.currentUserId) {
-                    console.error("图片上传失败: 请先登录账户 (或注册) 才能上传图片。");
-                    
-                    saveBtn.innerText = '需登录才能上传图片！'; // Immediate feedback
-                    saveBtn.classList.remove('bg-blue-600', 'bg-green-600');
-                    saveBtn.classList.add('bg-red-600');
-                    
-                    setTimeout(() => {
-                        saveBtn.innerText = '保 存';
-                        saveBtn.classList.remove('bg-red-600');
-                        saveBtn.classList.add('bg-blue-600');
-                    }, 2500);
-                    
-                    return; // EXIT
+                    saveBtn.innerText = '需登录上传图片！'; 
+                    setTimeout(() => { saveBtn.innerText = editingId ? '保存修改' : '保 存'; }, 2000);
+                    return; 
                 }
-
-                saveBtn.innerHTML = '<i class="ph ph-spinner-gap animate-spin"></i> 上传中...';
+                saveBtn.innerHTML = '上传中...';
                 saveBtn.disabled = true;
-
-                const userId = window.currentUserId; 
-                imageUrl = await window.uploadImageAndGetUrl(currentModalImageBase64, userId);
-                
-                // Restore button state temporarily for feedback
+                imageUrl = await window.uploadImageAndGetUrl(currentModalImageBase64, window.currentUserId);
                 saveBtn.innerHTML = '保 存';
                 saveBtn.disabled = false;
-
-                // --- FIX 2: Check for upload failure and return before creating spot ---
-                if (!imageUrl) {
-                    // Critical failure on image upload means we cannot save the spot as intended.
-                    console.error("图片上传失败，请检查 Firebase Storage 配置和安全规则。已取消保存。");
-                    return;
-                }
+                if (!imageUrl) return;
             }
             
-            // --- Spot Creation ---
-            const newSpot = {
-                id:Date.now(), // Unique ID > 1000 for custom spots
-                name:n, 
-                type:document.getElementById('modal-type').value, 
-                desc:document.getElementById('modal-desc').value, 
-                lng: finalCoords.lng, 
-                lat: finalCoords.lat, 
-                tags:[],
-                img: imageUrl
+            const newSpotData = {
+                id: editingId || Date.now(), name:n, type:document.getElementById('modal-type').value, desc:document.getElementById('modal-desc').value, tags:[], img: imageUrl,
+                lng: 87.617733, lat: 43.792818
             };
 
-            state.spots.push(newSpot);
-            window.state.tempSpotCoords = null; // Clear temp coords
+            if (editingId) {
+                const index = state.spots.findIndex(s => s.id === editingId);
+                if (index > -1) state.spots[index] = newSpotData;
+            } else {
+                state.spots.push(newSpotData);
+            }
+
+            window.state.editingSpotId = null;
             currentModalImageBase64 = null;
             closeModal('attraction-modal');
-            
-            // --- FIX 3: Add successful local visual feedback ---
-            saveBtn.innerText = '保存成功！';
-            saveBtn.classList.remove('bg-blue-600');
-            saveBtn.classList.add('bg-green-600');
-            setTimeout(() => {
-                saveBtn.innerText = '保 存';
-                saveBtn.classList.remove('bg-green-600');
-                saveBtn.classList.add('bg-blue-600');
-            }, 1500);
-
-            // --- Triggers renderApp via debounceSave -> saveUserData -> onSnapshot ---
+            renderExploreGrid();
             debounceSave();
-            
         }
         
-        // --- 3. Budget & Gear ---
+        // --- Budget & Gear ---
         window.addCustomBudgetItem = () => {
-            const itemName = document.getElementById('custom-item-name').value.trim();
-            const itemPeople = parseInt(document.getElementById('custom-item-people').value) || 1;
-            const itemDays = parseInt(document.getElementById('custom-item-days').value) || 1;
-            const itemPayer = document.getElementById('custom-item-payer').value.trim(); // FIX: 付款人改为自由输入
-            const itemPrice = parseFloat(document.getElementById('custom-item-price').value);
+            const name = document.getElementById('custom-item-name').value.trim();
+            const people = parseInt(document.getElementById('custom-item-people').value) || 1;
+            const days = parseInt(document.getElementById('custom-item-days').value) || 1;
+            const payer = document.getElementById('custom-item-payer').value.trim();
+            const price = parseFloat(document.getElementById('custom-item-price').value);
 
-            if (itemName && itemPrice && itemPrice > 0 && itemPeople >= 1 && itemDays >= 1) {
-                
-                const newItem = {
-                    name: itemName,
-                    people: itemPeople,
-                    days: itemDays,
-                    payer: itemPayer || '未指定', // Default if left blank
-                    price: itemPrice
-                };
-                
-                window.state.customBudget.push(newItem);
-                
-                // Clear inputs
+            if (name && price && price > 0) {
+                state.customBudget.push({ name, people, days, payer: payer || '未指定', price });
                 document.getElementById('custom-item-name').value = '';
                 document.getElementById('custom-item-people').value = '';
                 document.getElementById('custom-item-days').value = '';
                 document.getElementById('custom-item-payer').value = '';
                 document.getElementById('custom-item-price').value = '';
-                
-                updateDashboard(); // Triggers renderBudget/save
-                debounceSave(); // FIX: Ensure custom budget items are saved immediately
-            } else {
-                console.error("请输入有效的项目名称、人数、天数和金额。");
+                updateDashboard(); debounceSave();
             }
         }
         
         window.renderBudget = () => {
-            const p=parseInt(document.getElementById('budget-people').value)||1, 
-                  d=parseInt(document.getElementById('budget-days').value)||1;
-            const stay=parseFloat(document.getElementById('price-stay').value)||0, 
-                  trans=parseFloat(document.getElementById('price-trans').value)||0;
-            const food=parseFloat(document.getElementById('price-food').value)||0, 
-                  ticket=parseFloat(document.getElementById('price-ticket').value)||0;
+            const p=parseInt(document.getElementById('budget-people').value)||1, d=parseInt(document.getElementById('budget-days').value)||1;
+            const stay=parseFloat(document.getElementById('price-stay').value)||0, trans=parseFloat(document.getElementById('price-trans').value)||0;
+            const food=parseFloat(document.getElementById('price-food').value)||0, ticket=parseFloat(document.getElementById('price-ticket').value)||0;
                   
-            // --- FIXED CALCULATIONS ---
-            // 住宿：按房间 x 晚数 (天数 - 1)
             const tStay = stay * Math.ceil(p / 2) * Math.max(0, d - 1); 
-            // 交通：按天 x 天数
             const tTrans = trans * d; 
-            // 食/票：按人 x 人数 x 天数 (餐费每天都要)
-            const tFood = food * p * d; // FIX: 餐费乘天数
-            // 门票：按人 x 人数 (一次性消费)
+            const tFood = food * p * d; 
             const tTicket = ticket * p;
-            
-            // 总人均基础消费 (不包括自定义项)
             const totalBase = tStay + tTrans + tFood + tTicket;
             
-            let listHtml=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🏨 住宿 (${stay} x ${Math.max(0, d - 1)} 晚)</span><span class="font-mono font-bold">¥<span id="disp-stay">${tStay.toLocaleString()}</span></span></div>`;
-            listHtml+=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🚗 交通 (${trans} x ${d} 天)</span><span class="font-mono font-bold">¥<span id="disp-trans">${tTrans.toLocaleString()}</span></span></div>`;
-            listHtml+=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🥘 餐费 (${food} x ${p} 人 x ${d} 天)</span><span class="font-mono font-bold">¥<span id="disp-food">${tFood.toLocaleString()}</span></span></div>`; // FIX: 显示乘了天数
-            listHtml+=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🎫 门票 (${ticket} x ${p} 人)</span><span class="font-mono font-bold">¥<span id="disp-ticket">${tTicket.toLocaleString()}</span></span></div>`;
+            let listHtml=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🏨 住宿 (${stay} x ${Math.max(0, d - 1)} 晚)</span><span class="font-mono font-bold">¥${tStay.toLocaleString()}</span></div>`;
+            listHtml+=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🚗 交通 (${trans} x ${d} 天)</span><span class="font-mono font-bold">¥${tTrans.toLocaleString()}</span></div>`;
+            listHtml+=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🥘 餐费 (${food} x ${p}人 x ${d}天)</span><span class="font-mono font-bold">¥${tFood.toLocaleString()}</span></div>`; 
+            listHtml+=`<div class="flex justify-between items-center p-2 bg-white/10 rounded-lg border border-white/10"><span>🎫 门票 (${ticket} x ${p}人)</span><span class="font-mono font-bold">¥${tTicket.toLocaleString()}</span></div>`;
             
             let tCustom = 0;
             state.customBudget.forEach((i, x) => { 
-                // Custom logic: Price * People * Days
                 const itemTotal = i.price * i.people * i.days;
                 tCustom += itemTotal; 
-                
-                listHtml+=`<div class="flex justify-between items-center p-2 bg-orange-500/20 rounded-lg border border-orange-500/30 text-orange-100 budget-item-enter relative group">
-                    <span class="truncate">✨ ${i.name} (P:${i.payer}, ${i.price.toLocaleString()} x ${i.people}人 x ${i.days}天)</span>
-                    <div class="flex items-center gap-2">
-                        <span class="font-mono font-bold">¥${itemTotal.toLocaleString()}</span>
-                        <button onclick="removeBudgetItem(${x})" class="text-white/70 hover:text-white transition"><i class="ph ph-trash"></i></button>
-                    </div>
-                </div>`; 
+                listHtml+=`<div class="flex justify-between items-center p-2 bg-orange-500/20 rounded-lg border border-orange-500/30 text-orange-100 budget-item-enter relative group"><span class="truncate">✨ ${i.name} (${i.payer}, ¥${i.price} x ${i.people} x ${i.days})</span><div class="flex items-center gap-2"><span class="font-mono font-bold">¥${itemTotal.toLocaleString()}</span><button onclick="window.removeBudgetItem(${x})" class="text-white/70 hover:text-white transition"><i class="ph ph-trash"></i></button></div></div>`; 
             });
-            listHtml+=`<span id="disp-custom" style="display:none">${tCustom}</span>`;
 
             document.getElementById('budget-summary-list').innerHTML=listHtml;
             const total=totalBase + tCustom;
             document.getElementById('disp-total').innerText=total.toLocaleString();
             document.getElementById('disp-avg').innerText=Math.round(total / p).toLocaleString();
-            
-            // debounceSave(); // Removed from here, moved to inputs
         }
         
-        function removeBudgetItem(i){
-            state.customBudget.splice(i,1); 
-            updateDashboard(); // Triggers renderBudget/save
-            debounceSave(); // FIX: Ensure removal is saved
-        }
+        window.removeBudgetItem = (i) => { state.customBudget.splice(i,1); updateDashboard(); debounceSave(); }
         
+        window.removeCustomGear = (i) => {
+            state.customGear.splice(i, 1);
+            window.renderGear(); // Re-render to update the list immediately
+            window.debounceSave();
+        }
+
         window.renderGear = () => {
             const c=document.getElementById('gear-container'); 
+            if(!c) return;
             c.innerHTML='';
             
-            let cats={...defaultGear}; 
-            if(state.customGear.length) {
-                 // Convert customGear array to an object property
-                 cats["自定义物品"] = state.customGear;
+            // Render Default Gear
+            for(const [k,v] of Object.entries(defaultGear)){
+                 let html = `<div><h4 class="font-bold text-gray-700 text-sm mb-2 border-l-4 border-blue-500 pl-2">${k}</h4><div class="space-y-2">`;
+                 v.forEach(item => {
+                     const isChecked = localStorage.getItem(`gear_${item}`) === 'true';
+                     html += `<label class="flex items-center space-x-2 text-xs text-gray-500 hover:bg-gray-50 p-1 rounded transition cursor-pointer">
+                        <input type="checkbox" class="rounded text-blue-600 w-4 h-4 gear-check" data-item="${item}" ${isChecked ? 'checked' : ''} onchange="window.updateGearStats(this)">
+                        <span>${item}</span>
+                     </label>`;
+                 });
+                 html += `</div></div>`;
+                 c.innerHTML += html;
             }
-            
-            for(const [k,v] of Object.entries(cats)){
-                let itemsHtml = '';
-                // Handle both simple string arrays (defaultGear) and objects (customGear, if saved with old format)
-                const items = Array.isArray(v) ? v : Object.values(v); 
 
-                items.forEach(i => {
-                    // Check local state for checked items (simulating persistent check state)
-                    const isChecked = localStorage.getItem(`gear_${i}`) === 'true';
-                    // FIX: Checkbox change calls debounceSave internally via updateGearStats
-                    itemsHtml += `<label class="flex items-center space-x-2 text-xs text-gray-500 hover:bg-gray-50 p-1 rounded transition cursor-pointer"><input type="checkbox" class="rounded text-blue-600 w-4 h-4 gear-check" data-item="${i}" ${isChecked ? 'checked' : ''} onchange="updateGearStats(this); debounceSave();"><span>${i}</span></label>`;
-                });
-
-                c.innerHTML+=`<div><h4 class="font-bold text-gray-700 text-sm mb-2 border-l-4 border-blue-500 pl-2">${k}</h4><div class="space-y-2">${itemsHtml}</div></div>`;
+            // Render Custom Gear
+            if(window.state.customGear && window.state.customGear.length > 0) {
+                 let html = `<div><h4 class="font-bold text-gray-700 text-sm mb-2 border-l-4 border-green-500 pl-2">自定义物品</h4><div class="space-y-2">`;
+                 window.state.customGear.forEach((item, index) => {
+                     const isChecked = localStorage.getItem(`gear_${item}`) === 'true';
+                     html += `<div class="flex items-center justify-between hover:bg-gray-50 p-1 rounded transition">
+                        <label class="flex items-center space-x-2 text-xs text-gray-500 cursor-pointer flex-grow">
+                            <input type="checkbox" class="rounded text-blue-600 w-4 h-4 gear-check" data-item="${item}" ${isChecked ? 'checked' : ''} onchange="window.updateGearStats(this)">
+                            <span>${item}</span>
+                        </label>
+                        <button onclick="window.removeCustomGear(${index})" class="text-red-400 hover:text-red-600 ml-2" title="删除"><i class="ph ph-trash"></i></button>
+                     </div>`;
+                 });
+                 html += `</div></div>`;
+                 c.innerHTML += html;
             }
-            updateGearStats();
+            window.updateGearStats();
         }
         
-        // This function handles checkbox state and updates stats
-        function updateGearStats(checkbox = null){
+        window.updateGearStats = (checkbox = null) => {
             if (checkbox) {
-                // Save/update state in localStorage when a checkbox changes
-                localStorage.setItem(`gear_${checkbox.dataset.item}`, checkbox.checked);
+                try {
+                    localStorage.setItem(`gear_${checkbox.dataset.item}`, checkbox.checked);
+                } catch(e) { console.warn('LocalStorage failed', e); }
             }
-            
             const checks = document.querySelectorAll('.gear-check');
-            const t = checks.length;
             const c = Array.from(checks).filter(ch => ch.checked).length;
-            
             document.getElementById('pack-checked-count').innerText=c; 
-            document.getElementById('pack-total-count').innerText=t;
-            
-            const percent = (t ? Math.round(c/t*100) : 0);
+            document.getElementById('pack-total-count').innerText=checks.length;
+            const percent = (checks.length ? Math.round(c/checks.length*100) : 0);
             document.getElementById('pack-percent-text').innerText=percent + '%';
-            
-            // Update Dashboard and Charts
-            if(packChart){packChart.data.datasets[0].data=[c,t-c]; packChart.update();}
+            if(packChart){packChart.data.datasets[0].data=[c,checks.length-c]; packChart.update();}
             document.getElementById('dash-pack').innerText = percent;
-            
-            // No debounceSave here; it's called explicitly from the checkbox onchange.
         }
         
         window.addCustomGear = () => {
             const n = window.prompt("请输入新的装备名称:"); 
-            if (n && n.trim()) {
+            if (n && n.trim()) { 
+                if (!window.state.customGear) window.state.customGear = [];
                 window.state.customGear.push(n.trim()); 
-                window.renderGear(); // Renders the gear list (which includes the new item)
-                debounceSave(); // FIX: Ensure custom gear is saved
+                window.renderGear(); 
+                window.debounceSave(); 
             }
         }
         
-        // Export logic (placeholder)
-        window.exportGearList = () => {
-            console.log("Exporting gear list...");
-            // FIX: Removed alert
-            console.log("清单已准备好导出！(功能待实现)");
-        }
+        window.exportGearList = () => { alert("清单导出功能 (暂未实现)"); } 
 
-        // --- 4. Utility ---
         window.updateCharts = () => {
-            // Get calculated totals from the Budget tab
-            // NOTE: We rely on renderBudget/updateDashboard running first to calculate and update disp-X spans
             const dispTotalEl = document.getElementById('disp-total');
-            if (dispTotalEl.innerText === '0') {
-                 // Skip chart update if totals are zeroed out (initial load/no data)
-                 return;
-            }
+            if (dispTotalEl.innerText === '0') return;
             
-            // Recalculate base costs for chart distribution ONLY
-            const p=parseInt(document.getElementById('budget-people').value)||1;
-            const d=parseInt(document.getElementById('budget-days').value)||1;
-            const stay=parseFloat(document.getElementById('price-stay').value)||0;
-            const trans=parseFloat(document.getElementById('price-trans').value)||0;
-            const food=parseFloat(document.getElementById('price-food').value)||0;
-            const ticket=parseFloat(document.getElementById('price-ticket').value)||0;
+            const p=parseInt(document.getElementById('budget-people').value)||1, d=parseInt(document.getElementById('budget-days').value)||1;
+            const stay=parseFloat(document.getElementById('price-stay').value)||0, trans=parseFloat(document.getElementById('price-trans').value)||0;
+            const food=parseFloat(document.getElementById('price-food').value)||0, ticket=parseFloat(document.getElementById('price-ticket').value)||0;
             
             const s= stay * Math.ceil(p / 2) * Math.max(0, d - 1); 
             const tr= trans * d;
@@ -1272,71 +964,34 @@
             let c = 0;
             window.state.customBudget.forEach(i => { c += i.price * i.people * i.days; });
             
-            // Budget Doughnut Chart: Labels are ['住','行','食','票','自']
             if (budgetChart) {
-                 // We combine Food and Ticket for the default cost type
-                 const baseMisc = fd + tk;
-                 budgetChart.data.datasets[0].data=[s, tr, baseMisc, c]; 
-                 budgetChart.data.labels = ['住宿', '交通', '食/票', '自定义'];
-
-                 // Only update if total is positive to prevent chart errors
-                 const sum = s + tr + baseMisc + c;
-                 if (sum > 0) {
-                    budgetChart.update();
-                 }
+                 budgetChart.data.datasets[0].data=[s, tr, fd+tk, c]; 
+                 budgetChart.update();
             }
             
-            // Polar Area Chart (Spot types)
-            const ids = state.itinerary.flat(), 
-                  sp = ids.map(id => state.spots.find(s=>s.id===id)).filter(s=>s);
-            
+            const ids = state.itinerary.flat(), sp = ids.map(id => state.spots.find(s=>s.id===id)).filter(s=>s);
             if (polarChart) {
-                polarChart.data.datasets[0].data=[
-                    sp.filter(s=>s.type==='自然').length,
-                    sp.filter(s=>s.type==='人文').length,
-                    sp.filter(s=>s.type==='滑雪').length,
-                    sp.filter(s=>s.type==='custom').length
-                ]; 
+                polarChart.data.datasets[0].data=[sp.filter(s=>s.type==='自然').length,sp.filter(s=>s.type==='人文').length,sp.filter(s=>s.type==='滑雪').length,sp.filter(s=>s.type==='custom').length]; 
                 polarChart.update();
             }
-            
-            // Weather Prediction
-            const temp = parseInt(document.getElementById('temp-slider').value) || -20;
-            document.getElementById('temp-val').innerText = temp;
-            document.getElementById('prob-fog').innerText = `${Math.min(99, Math.max(20, 100 + temp * 2))}%`;
-            document.getElementById('prob-ice').innerText = `${Math.min(99, Math.max(10, 100 + temp * 3))}%`;
         }
 
         window.updateDashboard = () => {
-            renderBudget(); // Must run first to calculate totals
-            
-            const t=document.getElementById('disp-total').innerText;
-            document.getElementById('dash-total').innerText=t;
+            window.renderBudget(); 
+            document.getElementById('dash-total').innerText=document.getElementById('disp-total').innerText;
             document.getElementById('dash-days').innerText=state.itinerary.length;
-            
-            // Pack % is updated by updateGearStats() which is called by renderGear()
-            updateGearStats(); 
-            
+            window.updateGearStats(); 
             document.getElementById('dash-ski-spots').innerText=state.itinerary.flat().map(id=>state.spots.find(s=>s.id===id)).filter(s=>s&&s.type==='滑雪').length;
             window.updateCharts();
-            
-            // Debounce save is called inside renderBudget and updateGearStats
         }
         
         window.initCharts = () => {
-            // Initialize once to prevent re-creation errors
-            if (!budgetChart) {
-                budgetChart=new Chart(document.getElementById('budgetDoughnutChart'),{type:'doughnut',data:{labels:['住宿','交通','食/票','自定义'],datasets:[{data:[1,1,1,1],backgroundColor:['#3B82F6','#10B981','#8B5CF6','#F97316'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:10}}}}});
-            }
-            if (!polarChart) {
-                polarChart=new Chart(document.getElementById('spotPolarChart'),{type:'polarArea',data:{labels:['自然','人文','滑雪','自定'],datasets:[{data:[1,1,1,0],backgroundColor:['#38BDF8aa','#A78BFAaa','#F97316aa','#FBBF24aa'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{ticks:{display:false}}},plugins:{legend:{position:'right',labels:{boxWidth:10}}}}});
-            }
-            if (!packChart) {
-                packChart=new Chart(document.getElementById('packChart'),{type:'doughnut',data:{datasets:[{data:[0,1],backgroundColor:['#2563EB','#E5E7EB'],borderWidth:0,cutout:'85%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{tooltip:{enabled:false}}}});
-            }
+            if (!budgetChart) budgetChart=new Chart(document.getElementById('budgetDoughnutChart'),{type:'doughnut',data:{labels:['住宿','交通','食/票','自定义'],datasets:[{data:[1,1,1,1],backgroundColor:['#3B82F6','#10B981','#8B5CF6','#F97316'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:10}}}}});
+            if (!polarChart) polarChart=new Chart(document.getElementById('spotPolarChart'),{type:'polarArea',data:{labels:['自然','人文','滑雪','自定'],datasets:[{data:[1,1,1,0],backgroundColor:['#38BDF8aa','#A78BFAaa','#F97316aa','#FBBF24aa'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{ticks:{display:false}}},plugins:{legend:{position:'right',labels:{boxWidth:10}}}}});
+            if (!packChart) packChart=new Chart(document.getElementById('packChart'),{type:'doughnut',data:{datasets:[{data:[0,1],backgroundColor:['#2563EB','#E5E7EB'],borderWidth:0,cutout:'85%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{tooltip:{enabled:false}}}});
         }
         
-        function switchTab(id) {
+        window.switchTab = (id) => {
             document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));
             document.getElementById(id).classList.add('active');
             document.querySelectorAll('.mobile-nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
@@ -1347,8 +1002,8 @@
                 // FIX: Now calls the general itinerary render view
                 window.renderDayList(); 
             }
-            if(id==='data') updateDashboard();
-            if(id==='pack') renderGear(); // Force render pack list on tab switch
+            if(id==='data') window.updateDashboard();
+            if(id==='pack') window.renderGear(); // Force render pack list on tab switch
             
             window.scrollTo(0,0);
         }
