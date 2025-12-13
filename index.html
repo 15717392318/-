@@ -64,7 +64,8 @@
             <div class="bg-white p-4 rounded-2xl card-shadow mb-4 sticky top-16 z-30 border border-gray-100">
                 <div class="relative w-full mb-3">
                     <i class="ph ph-magnifying-glass absolute left-3 top-3 text-gray-400"></i>
-                    <input type="text" id="explore-search" placeholder="搜索心仪景点..." oninput="renderExploreGrid()" class="w-full bg-gray-50 border-0 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100 transition-all">
+                    <!-- FIX: 添加 autocomplete="off" -->
+                    <input type="text" id="explore-search" placeholder="搜索心仪景点..." autocomplete="off" oninput="renderExploreGrid()" class="w-full bg-gray-50 border-0 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100 transition-all">
                 </div>
                 <div class="flex overflow-x-auto gap-2 pb-1 custom-scrollbar">
                     <select id="explore-filter" onchange="renderExploreGrid()" class="bg-gray-50 border-0 rounded-lg px-3 py-1.5 text-xs outline-none text-gray-600 font-medium">
@@ -227,7 +228,7 @@
     <!-- Modal: 自定义景点 (编辑/新增) -->
     <div id="attraction-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-[fadeIn_0.2s_ease-out]">
-            <div class="flex justify-between items-center mb-5"><h3 class="font-bold text-lg text-gray-800">景点详情</h3><button onclick="closeModal('attraction-modal')" class="text-gray-400 p-2"><i class="ph ph-x text-xl"></i></button></div>
+            <div class="flex justify-between items-center mb-5"><h3 class="font-bold text-lg text-gray-800" id="modal-title">景点详情</h3><button onclick="closeModal('attraction-modal')" class="text-gray-400 p-2"><i class="ph ph-x text-xl"></i></button></div>
             <div class="space-y-4">
                 <div class="relative group cursor-pointer" onclick="document.getElementById('modal-img-input').click()">
                     <div id="modal-img-preview" class="w-full h-32 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 overflow-hidden relative">
@@ -339,7 +340,15 @@
              if(p.length < 6) return document.getElementById('auth-error').innerText = '密码至少需要6位';
              const email = `${u}@travel.planner.user`; // Simple email construction
              try { if(authMode==='register') {await createUserWithEmailAndPassword(auth, email, p); alert("注册成功！");} else await signInWithEmailAndPassword(auth, email, p); closeModal('auth-modal'); }
-             catch(e) { document.getElementById('auth-error').innerText = '认证失败: ' + e.code; }
+             catch(e) { 
+                 console.error("Auth Error:", e);
+                 let msg = "认证失败";
+                 if (e.code === 'auth/unauthorized-domain') msg = "当前域名未在Firebase授权(auth/unauthorized-domain)";
+                 else if (e.code === 'auth/email-already-in-use') msg = "邮箱已被注册";
+                 else if (e.code === 'auth/weak-password') msg = "密码太弱";
+                 else if (e.message) msg = e.message;
+                 document.getElementById('auth-error').innerText = msg;
+             }
         };
         window.handleSignOut = async () => { await signOut(auth); location.reload(); };
 
@@ -371,13 +380,17 @@
                             <button onclick="deleteSpot(${s.id})" class="text-red-500 flex items-center gap-1 text-xs font-medium px-2 py-1"><i class="ph ph-trash"></i> 删除</button>
                         </div>
                     ` : '';
+                    
+                    // FIX: Ensure clicking card works even if not logged in
+                    const clickAction = currentUserId ? `editSpot(${s.id})` : `openAuthModal()`;
+                    const overlayText = currentUserId ? '点击修改' : '登录编辑';
 
                     div.innerHTML=`
                         <!-- Click Image to Edit -->
-                        <div onclick="${currentUserId ? `editSpot(${s.id})` : ''}" class="cursor-pointer relative">
+                        <div onclick="${clickAction}" class="cursor-pointer relative">
                             ${imgHtml}
                             <div class="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full backdrop-blur-sm">
-                                ${currentUserId ? '点击修改' : '登录编辑'}
+                                ${overlayText}
                             </div>
                         </div>
                         <div class="p-3 flex flex-col flex-grow">
@@ -690,6 +703,7 @@
             updateSyncStatus('saving');
             try {
                 // FIX: Save ALL spots (default + custom) to persist edits
+                // IMPORTANT: removed filters, now saving EVERYTHING
                 const cleanSpots = window.state.spots.map(s => ({ 
                     id: s.id, name: s.name, type: s.type, desc: s.desc||'', lng: s.lng||87.617, lat: s.lat||43.792, tags: s.tags||[], img: s.img||null 
                 }));
