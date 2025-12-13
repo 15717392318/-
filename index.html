@@ -64,7 +64,6 @@
             <div class="bg-white p-4 rounded-2xl card-shadow mb-4 sticky top-16 z-30 border border-gray-100">
                 <div class="relative w-full mb-3">
                     <i class="ph ph-magnifying-glass absolute left-3 top-3 text-gray-400"></i>
-                    <!-- FIX: 添加 autocomplete="off" -->
                     <input type="text" id="explore-search" placeholder="搜索心仪景点..." autocomplete="off" oninput="renderExploreGrid()" class="w-full bg-gray-50 border-0 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100 transition-all">
                 </div>
                 <div class="flex overflow-x-auto gap-2 pb-1 custom-scrollbar">
@@ -228,7 +227,7 @@
     <!-- Modal: 自定义景点 (编辑/新增) -->
     <div id="attraction-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-[fadeIn_0.2s_ease-out]">
-            <div class="flex justify-between items-center mb-5"><h3 class="font-bold text-lg text-gray-800" id="modal-title">景点详情</h3><button onclick="closeModal('attraction-modal')" class="text-gray-400 p-2"><i class="ph ph-x text-xl"></i></button></div>
+            <div class="flex justify-between items-center mb-5"><h3 class="font-bold text-lg text-gray-800">景点详情</h3><button onclick="closeModal('attraction-modal')" class="text-gray-400 p-2"><i class="ph ph-x text-xl"></i></button></div>
             <div class="space-y-4">
                 <div class="relative group cursor-pointer" onclick="document.getElementById('modal-img-input').click()">
                     <div id="modal-img-preview" class="w-full h-32 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 overflow-hidden relative">
@@ -304,7 +303,14 @@
         };
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        const configToUse = typeof __firebase_config !== 'undefined' && __firebase_config ? JSON.parse(__firebase_config) : customFirebaseConfig;
+        
+        let configToUse;
+        try {
+            configToUse = typeof __firebase_config !== 'undefined' && __firebase_config ? JSON.parse(__firebase_config) : customFirebaseConfig;
+        } catch (e) {
+            console.warn("Error parsing __firebase_config, falling back to custom config", e);
+            configToUse = customFirebaseConfig;
+        }
 
         let app, db, auth, storage; 
         let authMode = 'login'; 
@@ -337,6 +343,11 @@
         };
 
         window.handleAuthAction = async () => { 
+             // FIX: Guard clause if auth is undefined
+             if (!auth) {
+                 document.getElementById('auth-error').innerText = 'Firebase 未初始化，请刷新页面重试';
+                 return;
+             }
              const u = document.getElementById('auth-username').value; const p = document.getElementById('auth-password').value;
              if(!u) return document.getElementById('auth-error').innerText = '请输入账户名';
              if(p.length < 6) return document.getElementById('auth-error').innerText = '密码至少需要6位';
@@ -345,10 +356,10 @@
              catch(e) { 
                  console.error("Auth Error:", e);
                  let msg = "认证失败";
-                 if (e.code === 'auth/unauthorized-domain') msg = "当前域名未在Firebase授权";
+                 if (e.code === 'auth/unauthorized-domain') msg = "域名未授权(需在Firebase后台添加)";
                  else if (e.code === 'auth/email-already-in-use') msg = "账户已存在";
                  else if (e.code === 'auth/weak-password') msg = "密码太弱";
-                 else if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password') msg = "账户或密码错误";
+                 else if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') msg = "账户或密码错误";
                  else if (e.message) msg = e.message;
                  document.getElementById('auth-error').innerText = msg;
              }
@@ -429,7 +440,7 @@
              window.state.editingSpotId = id; 
              document.getElementById('modal-name').value = s.name;
              document.getElementById('modal-type').value = s.type;
-             document.getElementById('modal-desc').value = s.desc;
+             document.getElementById('modal-desc').value = s.desc || ''; // fix undefined desc
              if(s.img) {
                  currentModalImageBase64 = s.img;
                  document.getElementById('modal-img-preview').innerHTML = `<img src="${s.img}" class="w-full h-full object-cover rounded-xl">`;
@@ -469,6 +480,7 @@
              const btn = document.getElementById('save-spot-btn');
              btn.innerText = '正在上传图片...';
              
+             // FIX: Use module level currentUserId correctly
              let imgUrl = currentModalImageBase64;
              if (imgUrl && !imgUrl.startsWith('http') && currentUserId) {
                   const uploadedUrl = await uploadImageAndGetUrl(imgUrl, currentUserId);
@@ -677,7 +689,7 @@
             onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    // FIX: Always prioritize cloud data for spots, never fallback to default if cloud data exists
+                    // FIX: Load FULL spots from cloud, overwriting local default if present
                     if (data.spots && data.spots.length > 0) {
                         window.state.spots = data.spots;
                     } else {
